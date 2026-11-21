@@ -45,7 +45,7 @@ class Engine:
         cl = classify(doc.text, pdf.name, self.classes,
                       int(self.settings.get("classify_head_chars", 6000)))
         tr = {"klasyfikacja": {"wynik": cl.name, "punkty": cl.scores, "trafienia": cl.hits.get(cl.name, [])},
-              "strony": len(doc.pages), "ocr_strony": doc.ocr_pages, "ostrzezenia": doc.warnings}
+              "strony": len(doc.pages), "ocr_strony": doc.ocr_pages, "ocr_silnik": doc.ocr_engine, "ostrzezenia": doc.warnings}
         if cl.name is None:
             tr["czas_s"] = round(time.time() - t0, 2)
             return Result(pdf, None, None, tr)
@@ -105,7 +105,13 @@ def run(input_dir: Path, output_dir: Path, trace_dir: Path | None = None, use_ll
                 out.write_text(json.dumps(res.data, ensure_ascii=False, indent=2), encoding="utf-8")
                 log.info("%-45s -> %-15s %s", str(rel.with_suffix(".pdf")), res.doc_class, out)
             else:
-                log.info("%-45s -> pominięty (nierozpoznany typ dokumentu)", str(rel.with_suffix(".pdf")))
+                # UZP: dokument spoza klas -> pusty plik .json (konfigurowalne: unknown_output, null = brak pliku)
+                empty = eng.settings.get("unknown_output", "{}")
+                if empty is not None:
+                    out = output_dir / rel
+                    out.parent.mkdir(parents=True, exist_ok=True)
+                    out.write_text(empty, encoding="utf-8")
+                log.info("%-45s -> nierozpoznany typ dokumentu (pusty JSON)", str(rel.with_suffix(".pdf")))
             if trace_dir:
                 t = Path(trace_dir) / rel.with_suffix(".trace.json")
                 t.parent.mkdir(parents=True, exist_ok=True)

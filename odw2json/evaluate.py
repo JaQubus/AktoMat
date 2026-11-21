@@ -97,18 +97,31 @@ def run_eval(gt_dir: Path, pred_dir: Path | None, report_dir: Path, use_llm=None
     for case in sorted(p for p in gt_dir.iterdir() if p.is_dir()):
         preds = {}
         for pdf in sorted(case.glob("*.pdf")):
-            expected = EXPECTED_CLASS.get(pdf.stem)
+            expected = EXPECTED_CLASS.get(pdf.stem)   # None = dokument negatywny (nie powinien mieć klasy)
             got = cls_of.get((case.name, pdf.stem)) if cls_of is not None else None
             pj = pred_dir / case.name / f"{pdf.stem}.json"
-            data = json.loads(pj.read_text(encoding="utf-8")) if pj.exists() else None
-            if cls_of is None and data is not None:
-                got = expected  # przy gotowych predykcjach przyjmujemy klasę z nazwy pliku
-            if expected:
-                cls_all += 1
-                cls_ok += got == expected
-                if got != expected:
-                    cls_errors.append(f"{case.name}/{pdf.name}: oczekiwano {expected}, jest {got}")
-            if got and data is not None:
+            data = None
+            if pj.exists():
+                raw = pj.read_text(encoding="utf-8").strip()
+                data = json.loads(raw) if raw else {}
+            if cls_of is None:
+                got = expected if data else None  # gotowe predykcje: klasa z nazwy pliku, pusty JSON = brak klasy
+            cls_all += 1
+            cls_ok += got == expected
+            if got != expected:
+                cls_errors.append(f"{case.name}/{pdf.name}: oczekiwano {expected}, jest {got}")
+            if expected is None:
+                # negatyw z wartościami = każda niepusta wartość to FP
+                for path, v in (paths.leaves(data) if data else []):
+                    if not _empty(v):
+                        total["FP"] += 1
+                        per_class["negatywne"]["FP"] += 1
+                        errors.append({"sprawa": case.name, "klasa": "negatywne", "pole": f"{pdf.name}:{path}",
+                                       "wynik": "FP", "predykcja": v, "wzorzec": None})
+                if not data:
+                    per_class["negatywne"]["TN"] += 1
+                continue
+            if got == expected and data:
                 preds[got] = data
         for gj in sorted(case.glob("*.json")):
             klass = gj.stem

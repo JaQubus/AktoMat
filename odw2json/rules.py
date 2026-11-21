@@ -37,6 +37,42 @@ NOT_NAME = re.compile(
     r"odwoławcz\w*|zamówień|publiczn\w*|prawo|wykonawc\w*|mocodawc\w*|data|dotyczy|zakres|podpis\w*)\b", re.IGNORECASE)
 
 
+# --- Odporność na brak polskich znaków (OCR, RapidOCR, ręcznie pisane PDF-y) ---
+_LOOSE = {"ą": "ąa", "ć": "ćc", "ę": "ęe", "ł": "łlt", "ń": "ńn", "ó": "óo", "ś": "śs", "ź": "źżz", "ż": "żźz",
+          "Ą": "ĄA", "Ć": "ĆC", "Ę": "ĘE", "Ł": "ŁLE", "Ń": "ŃN", "Ó": "ÓO0", "Ś": "ŚS", "Ź": "ŹŻZ", "Ż": "ŻŹZ"}
+
+
+def loosen(pattern: str) -> str:
+    """Każda polska litera we wzorcu dopasowuje też swój odpowiednik bez ogonka (i typowe pomyłki OCR)."""
+    out, i, in_cls = [], 0, False
+    while i < len(pattern):
+        c = pattern[i]
+        if c == "\\" and i + 1 < len(pattern):
+            out.append(pattern[i:i + 2])
+            i += 2
+            continue
+        if c == "[" and not in_cls:
+            in_cls = True
+        elif c == "]" and in_cls:
+            in_cls = False
+        if c in _LOOSE:
+            out.append(_LOOSE[c] if in_cls else f"[{_LOOSE[c]}]")
+        else:
+            out.append(c)
+        i += 1
+    return "".join(out)
+
+
+_CACHE: dict = {}
+
+
+def rx(pattern: str, flags: int = 0) -> re.Pattern:
+    key = (pattern, flags)
+    if key not in _CACHE:
+        _CACHE[key] = re.compile(loosen(pattern), flags)
+    return _CACHE[key]
+
+
 @dataclass
 class Hit:
     value: object
@@ -59,7 +95,7 @@ def section_text(text: str, sections: dict, name: str | None) -> str:
     if not sec:
         return text
     flags = _flags(sec.get("flags", "i"))
-    starts = list(re.finditer(sec["start"], text, flags))
+    starts = list(rx(sec["start"], flags).finditer(text))
     if not starts:
         return ""
     occ = int(sec.get("occurrence", 0))
@@ -68,7 +104,7 @@ def section_text(text: str, sections: dict, name: str | None) -> str:
     st = starts[occ].end()
     end = len(text)
     if sec.get("end"):
-        m = re.compile(sec["end"], flags).search(text, st)
+        m = rx(sec["end"], flags).search(text, st)
         if m:
             end = m.start()
     if sec.get("max_chars"):
@@ -84,20 +120,20 @@ def r_regex(rule, text):
     flags = _flags(rule.get("flags"))
     if rule.get("max_chars"):
         text = text[: int(rule["max_chars"])]
-    rx = re.compile(rule["pattern"], flags)
+    rgx = rx(rule["pattern"], flags)
     grp = rule.get("group", "v" if "(?P<v>" in rule["pattern"] else 1)
     if rule.get("all"):
         vals, ev = [], []
-        for m in rx.finditer(text):
+        for m in rgx.finditer(text):
             v = ws(m.group(grp) or "")
             if v and v not in vals:
                 vals.append(v)
                 ev.append(_snip(text, m.start(), m.end()))
         return Hit(vals, " | ".join(ev[:3])) if vals else None
-    m = rx.search(text)
+    m = rgx.search(text)
     if not m:
         return None
-    v = m.group(grp) if rx.groups else m.group(0)
+    v = m.group(grp) if rgx.groups else m.group(0)
     if v is None:
         return None
     if "value" in rule:  # dopasowanie wzorca => stała wartość
@@ -110,8 +146,8 @@ _SENT_END = re.compile(rf"\.\s+(?=[{UPPER}][{LOWER}]+[\s,])|\n\s*\n|(?=Zarzut\s+
 
 def r_sentence_map(rule, text):
     flags = _flags(rule.get("flags"))
-    skip = re.compile(rule["skip"], flags) if rule.get("skip") else None
-    for m in re.finditer(rule["anchor"], text, flags):
+    skip = rx(rule["skip"], flags) if rule.get("skip") else None
+    for m in rx(rule["anchor"], flags).finditer(text):
         rest = text[m.start(): m.start() + int(rule.get("window", 400))]
         e = _SENT_END.search(rest, len(m.group(0)))
         sent = ws(rest[: e.start()] if e else rest)
@@ -119,7 +155,7 @@ def r_sentence_map(rule, text):
             continue
         ret = rule.get("return", "value")
         for opt in rule.get("map", []):
-            if re.search(opt["pattern"], sent, flags):
+            if rx(opt["pattern"], flags).search(sent):
                 if ret == "value":
                     return Hit(opt["value"], sent)
                 if ret == "match":
@@ -160,7 +196,7 @@ DOTS = re.compile(r"^\s*(?:[.…_]{5,}|-{8,})\s*$")
 def _signatories_dots(rule, text):
     """Osoby podpisane pod linią kropek (bez tytułów zawodowych), aż do wzorca `end`."""
     flags = _flags(rule.get("flags"))
-    end = re.compile(rule["end"], flags) if rule.get("end") else None
+    end = rx(rule["end"], flags) if rule.get("end") else None
     lines = text.splitlines()
     vals, ev = [], []
     for i, line in enumerate(lines):
@@ -192,12 +228,12 @@ def r_signatories(rule, text):
         return _signatories_dots(rule, text)
     block = text
     if rule.get("start"):
-        ms = list(re.finditer(rule["start"], text, flags))
+        ms = list(rx(rule["start"], flags).finditer(text))
         if not ms:
             return None
         block = text[ms[-1].end():] if rule.get("last", True) else text[ms[0].end():]
     if rule.get("end"):
-        me = re.search(rule["end"], block, flags)
+        me = rx(rule["end"], flags).search(block)
         if me:
             block = block[: me.start()]
     vals = []
@@ -223,13 +259,13 @@ def r_entity_name(rule, text):
     """Nazwa podmiotu: tekst przed ', ul.' / ' z siedzibą' / '(KRS' / nowej linii z adresem."""
     t = text.strip()
     if rule.get("after"):
-        m = re.search(rule["after"], t, re.I)
+        m = rx(rule["after"], re.I).search(t)
         if not m:
             return None
         t = t[m.end():].lstrip(" :\n")
     if rule.get("skip"):
         lines = t.splitlines()
-        while lines and (not lines[0].strip() or re.search(rule["skip"], lines[0], re.I)):
+        while lines and (not lines[0].strip() or rx(rule["skip"], re.I).search(lines[0])):
             lines.pop(0)
         t = "\n".join(lines)
     t = t.strip()
@@ -246,7 +282,7 @@ def r_entity_name(rule, text):
 
 
 def r_first_line(rule, text):
-    skip = re.compile(rule["skip"], re.I) if rule.get("skip") else None
+    skip = rx(rule["skip"], re.I) if rule.get("skip") else None
     for line in text.splitlines():
         line = ws(line).strip(" :")
         if len(line) < 3 or (skip and skip.search(line)):
@@ -269,10 +305,10 @@ KINDS = {
 def split_blocks(text: str, sections: dict, cfg: dict) -> list[str]:
     """Podziel sekcję na bloki (np. członkowie konsorcjum, kilku zamawiających)."""
     scope = section_text(text, sections, cfg.get("section"))
-    parts = re.split(cfg["split"], scope, flags=_flags(cfg.get("flags", "m")))
+    parts = rx(cfg["split"], _flags(cfg.get("flags", "m"))).split(scope)
     if len(parts) < 3:
         return []
-    req = re.compile(cfg["require"], re.I) if cfg.get("require") else None
+    req = rx(cfg["require"], re.I) if cfg.get("require") else None
     return [p for p in parts[1:] if p.strip() and (not req or req.search(p))]
 
 
