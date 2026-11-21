@@ -644,6 +644,11 @@ function renderViewer() {
 }
 
 function renderPanel() {
+  const keep = S.tab === "dane" ? $("#fields")?.scrollTop : null;
+  renderPanelInner();
+  if (keep != null && $("#fields")) $("#fields").scrollTop = keep;
+}
+function renderPanelInner() {
   const it = S.current, p = $("#panel");
   if (it.pending) { p.innerHTML = `<div class="empty"><span class="spinner"></span><h3>Trwa analiza dokumentu</h3></div>`; return; }
   if (it.blad) { p.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p></div>`; return; }
@@ -676,8 +681,8 @@ function renderPanel() {
       <button class="btn" type="button" id="dl">Pobierz JSON</button>
       ${c.todo ? '<button class="btn" type="button" id="approveAll">Zatwierdź wszystkie</button>' : ""}
       ${others.length ? '<button class="btn primary" type="button" id="next">Następny do sprawdzenia</button>' : `<button class="btn primary" type="button" id="toCase">Wróć do sprawy</button>`}</div>`;
-  $$("#panel [data-filter]").forEach(b => b.onclick = () => { S.filter = b.dataset.filter; S.tab = "dane"; renderPanel(); });
-  $$("#panel [data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderPanel(); });
+  $$("#panel [data-filter]").forEach(b => b.onclick = () => { S.filter = b.dataset.filter; S.tab = "dane"; renderPanelInner(); });
+  $$("#panel [data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderPanelInner(); });
   bindFields(it);
   bindPanelFoot(it, others);
   $("#approveAll") && ($("#approveAll").onclick = () => {
@@ -725,17 +730,29 @@ function fieldHtml(it, pth, f) {
     <div class="fb"><span class="msg" data-msg="1">${fieldMsg(it, pth, f)}</span>${ok ? `<span class="ok-mark">✓ zatwierdzone</span><button type="button" class="btn sm" data-unok="1">Cofnij</button>` : `<button type="button" class="btn sm primary" data-ok="1">Zatwierdź</button>`}</div>
     ${ev}${notes}</div>`;
 }
-function bindFields(it) {
+function bindFields(it) { $$("#fields .field").forEach(el => bindField(it, el)); }
+function bindField(it, el) {
   const pola = it.slad?.pola || {};
-  $$("#fields .field").forEach(el => {
+  {
     const pth = el.dataset.path, inp = $("input", el);
     el.addEventListener("click", (e) => { if (e.target.closest("input,button:not([data-loc])")) return; activate(el, pth); locate(pola[pth]); });
     inp.addEventListener("focus", () => { activate(el, pth); locate(pola[pth]); });
     inp.addEventListener("change", () => applyEdit(it, pth, inp.value));
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); applyEdit(it, pth, inp.value); approve(it, pth, true); } });
     $("[data-ok]", el)?.addEventListener("click", () => { applyEdit(it, pth, inp.value); approve(it, pth, true); });
-    $("[data-unok]", el)?.addEventListener("click", () => { delete it.ok[pth]; logEntry(it, pth, "cofnięto zatwierdzenie", null, null); renderPanel(); drawNav(); });
-  });
+    $("[data-unok]", el)?.addEventListener("click", () => { delete it.ok[pth]; logEntry(it, pth, "cofnięto zatwierdzenie", null, null); updateField(it, pth); drawNav(); });
+  }
+}
+// Odświeża jedną kartę pola i pasek postępu bez przerysowania listy (lista nie skacze na górę).
+function updateField(it, pth) {
+  const el = $$("#fields .field").find(x => x.dataset.path === pth);
+  if (!el) return renderPanel();
+  const tmp = document.createElement("div"); tmp.innerHTML = fieldHtml(it, pth, it.slad.pola[pth]).trim();
+  const nu = tmp.firstElementChild; el.replaceWith(nu); bindField(it, nu);
+  const c = counts(it);
+  $("#progBar") && ($("#progBar").style.width = `${c.total ? c.done / c.total * 100 : 0}%`);
+  $("#progTxt") && ($("#progTxt").textContent = `${c.done} z ${c.total} pól zatwierdzonych`);
+  $("#todoTxt") && ($("#todoTxt").textContent = c.todo ? `${c.todo} do sprawdzenia` : "wszystko sprawdzone");
 }
 function applyEdit(it, pth, text) {
   const f = it.slad.pola[pth], prev = valOf(it, pth), val = parseLike(text, f.wartosc);
@@ -749,9 +766,9 @@ function applyEdit(it, pth, text) {
 function approve(it, pth, advance) {
   it.ok[pth] = true; logEntry(it, pth, "zatwierdzono", null, valOf(it, pth));
   const order = Object.keys(it.slad.pola), idx = order.indexOf(pth);
-  const nextP = order.slice(idx + 1).concat(order.slice(0, idx)).find(x => needsCheck(it, x));
-  renderPanel(); drawNav();
-  if (advance && nextP) { const inp = $(`#${fieldId(nextP)}`); if (inp) { inp.focus(); inp.select?.(); inp.scrollIntoView({ block: "nearest" }); } }
+  const nextP = S.filter === "todo" ? order.slice(idx + 1).concat(order.slice(0, idx)).find(x => needsCheck(it, x)) : order[idx + 1];
+  updateField(it, pth); drawNav();
+  if (advance && nextP) { const inp = $(`#${fieldId(nextP)}`); if (inp) { inp.focus({ preventScroll: true }); inp.select?.(); inp.closest(".field").scrollIntoView({ block: "nearest", behavior: "smooth" }); } }
   else if (advance && !nextP) say("Wszystkie pola tego dokumentu sprawdzone.");
 }
 function refreshFieldFlags() {
