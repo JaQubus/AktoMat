@@ -130,6 +130,24 @@
   .checks .skipbtn { margin-left: 8px; vertical-align: 1px; }
   .checks li.skipped > span:last-child > span:first-of-type, .skipped-row td:first-child { color: var(--muted); }
 
+  /* ---------- sesje, referent ---------- */
+  .sess { background: none; border: 1px solid rgba(255,255,255,.22); color: #fff; font: inherit; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; cursor: pointer; max-width: 280px; display: inline-flex; gap: 6px; align-items: center; }
+  .sess:hover { background: rgba(255,255,255,.1); }
+  .sess .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sess .st { opacity: .75; white-space: nowrap; }
+  dialog.dlg { border: 1px solid var(--line-strong); border-radius: 12px; padding: 0; width: min(440px, calc(100vw - 32px)); background: var(--panel); color: var(--ink); box-shadow: 0 20px 48px rgba(0,0,0,.3); }
+  dialog.dlg::backdrop { background: rgba(8, 24, 24, .45); }
+  .dlg form { padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .dlg h2 { margin: 0; font-size: 19px; }
+  .dlg p { margin: 0; color: var(--muted); font-size: 14px; }
+  .dlg input { height: 44px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 12px; font: inherit; font-size: 15px; background: var(--panel); color: var(--ink); }
+  .dlg .recent { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dlg .recent button { border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13.5px; cursor: pointer; }
+  .dlg .recent button:hover { border-color: var(--accent); color: var(--accent); }
+  .dlg .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+  .sesslist td .acts { display: flex; gap: 6px; justify-content: flex-end; }
+  .sesslist tr.cur td:first-child b::after { content: "bieżąca"; margin-left: 8px; font-size: 11.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
+
   /* ---------- kalendarz ---------- */
   .dp-wrap { position: relative; display: block; }
   .dp-wrap > input { padding-right: 44px !important; width: 100%; box-sizing: border-box; }
@@ -312,7 +330,8 @@
   </div>
   <span class="spacer"></span>
   <span id="chips" aria-live="polite"><span class="chip"><span class="dot"></span>łączenie…</span></span>
-  <button class="who" type="button" id="who" title="Zmień nazwisko referenta zapisywane w dzienniku zmian">Referent: —</button>
+  <button class="sess" type="button" id="sess" hidden title="Sesja zapisuje się sama. Kliknij, żeby zmienić nazwę."><span class="nm" id="sessName"></span><span class="st" id="sessState"></span></button>
+  <button class="who" type="button" id="who" title="Zmień referenta zapisywanego w dzienniku zmian">Referent: —</button>
   <button class="iconbtn" id="theme" type="button" aria-label="Przełącz motyw jasny lub ciemny" title="Motyw jasny/ciemny"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:block"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z" fill="currentColor"/></svg></button>
 </header>
 
@@ -330,6 +349,16 @@
 <input type="file" id="pickFolder" webkitdirectory directory multiple hidden>
 <input type="file" id="pickZip" accept=".zip,application/zip" multiple hidden>
 <div class="sr-only" aria-live="polite" id="live"></div>
+<dialog class="dlg" id="whoDlg" aria-labelledby="whoH">
+  <form method="dialog" id="whoForm">
+    <h2 id="whoH">Kto pracuje nad sprawami?</h2>
+    <p>Imię i nazwisko trafia do dziennika zmian przy każdej poprawce, zatwierdzeniu i pominięciu braku.</p>
+    <label class="sr-only" for="whoIn">Imię i nazwisko referenta</label>
+    <input id="whoIn" autocomplete="name" placeholder="np. Anna Kowalska" required>
+    <div class="recent" id="whoRecent"></div>
+    <div class="row"><button class="btn" type="button" id="whoSkip">Później</button><button class="btn primary" type="submit">Zaczynam pracę</button></div>
+  </form>
+</dialog>
 
 <script>
 const $ = (s, r = document) => r.querySelector(s);
@@ -347,6 +376,7 @@ const S = {
   items: [], view: "start", caseName: null, current: null,
   checks: {}, checksRaw: {}, skip: {}, letters: {}, pisma: null, log: [], q: "",
   filter: "todo", tab: "dane", zoom: 100, info: {}, activePath: null, termDays: {},
+  sid: null, sname: "", sessions: [], eksport: null,
   who: (() => { try { return localStorage.getItem("aktomat-who") || ""; } catch (e) { return ""; } })(),
 };
 const KIND = { odwolanie: ["ODW", "Odwołanie"], pelnomocnictwo: ["PEŁ", "Pełnomocnictwo"], przelew: ["PRZ", "Potwierdzenie przelewu"] };
@@ -363,10 +393,31 @@ $("#theme").onclick = () => {
   try { localStorage.setItem("o2j-theme", t); } catch (e) {}
 };
 function drawWho() { $("#who").textContent = "Referent: " + (S.who || "—"); }
+function recentWho() {
+  let list = []; try { list = JSON.parse(localStorage.getItem("aktomat-who-list") || "[]"); } catch (e) {}
+  S.sessions.forEach(x => x.referent && list.push(x.referent));
+  return [...new Set(list.filter(Boolean))].slice(0, 8);
+}
+function openWho() {
+  const d = $("#whoDlg"); $("#whoIn").value = S.who || "";
+  $("#whoRecent").innerHTML = recentWho().map(n => `<button type="button" data-who="${esc(n)}">${esc(n)}</button>`).join("");
+  $$("#whoRecent [data-who]").forEach(b => b.onclick = () => setWho(b.dataset.who));
+  if (!d.open) d.showModal(); setTimeout(() => $("#whoIn").focus(), 30);
+}
+function setWho(v) {
+  S.who = String(v || "").trim(); drawWho(); $("#whoDlg").close();
+  try {
+    localStorage.setItem("aktomat-who", S.who);
+    const list = JSON.parse(localStorage.getItem("aktomat-who-list") || "[]").filter(x => x !== S.who);
+    if (S.who) localStorage.setItem("aktomat-who-list", JSON.stringify([S.who, ...list].slice(0, 8)));
+  } catch (e) {}
+  if (S.who) say(`Referent: ${S.who}.`);
+  markDirty();
+}
+$("#whoForm").onsubmit = (e) => { e.preventDefault(); setWho($("#whoIn").value); };
+$("#whoSkip").onclick = () => $("#whoDlg").close();
 $("#who").onclick = () => {
-  const v = window.prompt("Imię i nazwisko referenta (zapisywane w dzienniku zmian):", S.who || "");
-  if (v === null) return; S.who = v.trim(); drawWho();
-  try { localStorage.setItem("aktomat-who", S.who); } catch (e) {}
+  openWho();
 };
 drawWho();
 $("#home").onclick = () => go("start");
@@ -434,6 +485,7 @@ function drawNav() {
   $$("#navlist [data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   $$("#navlist [data-case]").forEach(b => b.onclick = () => go("sprawa", { caseName: b.dataset.case }));
   $("#zipAll").disabled = busy || !S.items.some(i => !i.pending && !i.blad);
+  if (!busy) markDirty();
 }
 
 function render() {
@@ -448,6 +500,93 @@ function render() {
   S.view = "start"; renderStart();
 }
 
+/* ---------- sesje: zapis pracy na serwerze (katalog sesje/, poza gitem) ---------- */
+let saveTimer = null, restoring = false;
+const newSid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, "0")).join("");
+function sessState(t) { $("#sess").hidden = !S.sid; $("#sessName").textContent = S.sname || "Sesja"; $("#sessState").textContent = t || ""; }
+function sessionPayload() {
+  const items = S.items.filter(i => !i.pending).map(i => ({ id: i.id, plik: i.plik, sprawa: i.sprawa, sciezka: i.sciezka, klasa: i.klasa, json: i.json, orig: i.orig, slad: i.slad, edits: i.edits, ok: i.ok, blad: i.blad }));
+  const letters = Object.fromEntries(Object.entries(S.letters).map(([k, v]) => [k, { id: v.id, syg: v.syg, data: v.data, edited: v.edited, tekst: v.edited ? v.tekst : "" }]));
+  return { items, skip: S.skip, letters, log: S.log, termDays: S.termDays };
+}
+function markDirty() {
+  if (restoring || !S.items.some(i => !i.pending)) return;
+  if (!S.sid) { S.sid = newSid(); S.sname = `${caseNames()[0] || "Sprawy"} · ${new Date().toLocaleDateString("pl-PL")}`; try { localStorage.setItem("aktomat-sid", S.sid); } catch (e) {} }
+  sessState("zapisywanie…");
+  clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 1200);
+}
+async function saveSession() {
+  if (!S.sid) return;
+  try {
+    const r = await fetch(`/api/sesje/${S.sid}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nazwa: S.sname, referent: S.who, stan: sessionPayload() }) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const res = await r.json();
+    sessState("zapisano " + new Date(res.zmieniono).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }));
+  } catch (e) { sessState("błąd zapisu"); }
+}
+async function loadSessions() { try { S.sessions = await (await fetch("/api/sesje")).json(); } catch (e) { S.sessions = []; } return S.sessions; }
+async function openSession(sid, quiet) {
+  let d; try { const r = await fetch(`/api/sesje/${sid}`); if (!r.ok) throw 0; d = await r.json(); } catch (e) { if (!quiet) say("Nie udało się otworzyć sesji."); return false; }
+  clearTimeout(saveTimer); restoring = true;
+  const st = d.stan || {};
+  Object.assign(S, { sid, sname: d.nazwa || sid, items: (st.items || []).map(i => ({ ...i, pending: false, edits: i.edits || {}, ok: i.ok || {} })),
+    skip: st.skip || {}, letters: st.letters || {}, log: st.log || [], termDays: st.termDays || {}, checks: {}, checksRaw: {}, current: null, caseName: null });
+  try { localStorage.setItem("aktomat-sid", sid); } catch (e) {}
+  caseNames().forEach(n => recheck(n));
+  restoring = false;
+  sessState("zapisano " + (d.zmieniono ? new Date(d.zmieniono).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""));
+  say(`Otwarto sesję „${S.sname}”.`);
+  go("start");
+  return true;
+}
+function newSession() {
+  clearTimeout(saveTimer); if (S.sid && S.items.length) saveSession();
+  Object.assign(S, { sid: null, sname: "", items: [], skip: {}, letters: {}, log: [], termDays: {}, checks: {}, checksRaw: {}, current: null, caseName: null });
+  try { localStorage.removeItem("aktomat-sid"); } catch (e) {}
+  sessState(); loadSessions().then(() => go("start"));
+}
+$("#sess").onclick = () => {
+  const v = window.prompt("Nazwa sesji:", S.sname); if (v === null || !v.trim()) return;
+  S.sname = v.trim(); sessState(); markDirty();
+};
+function sessionsHtml() {
+  const list = S.sessions.filter(x => x.dokumenty);
+  if (!list.length) return "";
+  return `<section class="card"><div class="card-h"><h2>Zapisane sesje</h2><span class="st-muted" style="font-size:13px">Praca zapisuje się sama: poprawki, zatwierdzenia, pominięcia, pisma i dziennik.</span></div>
+    <div class="tw"><table class="sesslist"><thead><tr><th>Sesja</th><th>Sprawy</th><th>Dokumenty</th><th>Referent</th><th>Zmieniono</th><th></th></tr></thead><tbody>
+    ${list.map(x => `<tr class="${x.id === S.sid ? "cur" : ""}"><td><b>${esc(x.nazwa)}</b></td><td>${esc(x.sprawy.slice(0, 4).join(", "))}${x.sprawy.length > 4 ? ` i ${x.sprawy.length - 4} więcej` : ""}</td><td>${x.dokumenty}</td><td>${esc(x.referent || "—")}</td><td>${x.zmieniono ? new Date(x.zmieniono).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
+      <td><div class="acts">${x.id === S.sid ? "" : `<button class="btn sm primary" type="button" data-open="${esc(x.id)}">Otwórz</button>`}<button class="btn sm" type="button" data-del="${esc(x.id)}" aria-label="Usuń sesję ${esc(x.nazwa)}">Usuń</button></div></td></tr>`).join("")}
+    </tbody></table></div></section>`;
+}
+function bindSessions() {
+  $$("[data-open]").forEach(b => b.onclick = () => openSession(b.dataset.open));
+  $$("[data-del]").forEach(b => b.onclick = async () => {
+    const x = S.sessions.find(s => s.id === b.dataset.del);
+    if (!window.confirm(`Usunąć sesję „${x?.nazwa}” razem z wczytanymi plikami PDF? Tego nie da się cofnąć.`)) return;
+    await fetch(`/api/sesje/${b.dataset.del}`, { method: "DELETE" });
+    if (b.dataset.del === S.sid) return newSession();
+    await loadSessions(); render();
+  });
+  $("#newSess") && ($("#newSess").onclick = newSession);
+  $("#regCsv") && ($("#regCsv").onclick = () => { save(new Blob(["﻿" + registerCsv(caseNames())], { type: "text/csv;charset=utf-8" }), "rejestr_spraw.csv"); say("Pobrano rejestr spraw."); });
+}
+
+/* ---------- rejestr spraw (kolumny z config/eksport.yaml) ---------- */
+function getPath(obj, path) {
+  let o = obj;
+  for (const k of String(path).match(/[^.[\]]+/g) || []) { if (o == null) return null; o = o[/^\d+$/.test(k) ? +k : k]; }
+  return o ?? null;
+}
+function registerRow(n) {
+  const its = caseItems(n), ch = S.checks[n], all = ch ? [...ch.wymagane, ...ch.pola, ...ch.zgodnosc] : [];
+  const misses = all.filter(x => ["brak", "niezgodne"].includes(x.wynik)), skipped = all.filter(x => x.wynik === "pominiete");
+  const todo = its.reduce((a, i) => a + counts(i).todo, 0), term = ch?.terminy?.[0];
+  const v = { sprawa: n, referent: S.who, dokumenty: its.length, do_sprawdzenia: todo, braki: misses.map(x => x.opis).join("; "), pominiete: skipped.map(x => x.opis).join("; "),
+    termin: term?.do ? fmtDate(term.do) : "", stan: !ch ? "" : misses.length ? "braki formalne" : todo ? "w weryfikacji" : "gotowa" };
+  return (S.eksport?.rejestr?.kolumny || []).map(c => c.wartosc ? v[c.wartosc] ?? "" : getPath(its.find(i => i.klasa === c.klasa)?.json, c.pole));
+}
+function registerCsv(names) { return csv([(S.eksport?.rejestr?.kolumny || []).map(c => c.naglowek), ...names.map(registerRow)]); }
+
 /* ---------- wczytywanie ---------- */
 function renderStart() {
   const names = caseNames();
@@ -459,11 +598,13 @@ function renderStart() {
       <p>Skany są odczytywane przez OCR. Dokumenty spoza skonfigurowanych klas dostają pusty JSON <code>{}</code>.</p>
       <div class="pickers"><button class="btn primary" type="button" data-pick="pickFiles">Wybierz pliki PDF</button><button class="btn" type="button" data-pick="pickFolder">Wybierz folder</button><button class="btn" type="button" data-pick="pickZip">Wybierz ZIP</button></div>
     </div>
-    ${names.length ? `<section class="card"><div class="card-h"><h2>Wczytane sprawy</h2></div><div class="tw"><table><thead><tr><th>Sprawa</th><th>Dokumenty</th><th>Pola do sprawdzenia</th><th>Kontrola formalna</th></tr></thead><tbody>
+    ${names.length ? `<section class="card"><div class="card-h"><h2>Wczytane sprawy</h2><span style="flex:1"></span><button class="btn sm" type="button" id="regCsv">Rejestr spraw (CSV)</button><button class="btn sm" type="button" id="newSess">Nowa sesja</button></div><div class="tw"><table><thead><tr><th>Sprawa</th><th>Dokumenty</th><th>Pola do sprawdzenia</th><th>Kontrola formalna</th></tr></thead><tbody>
       ${names.filter(n => caseItems(n).some(matches)).map(n => { const its = caseItems(n), todo = its.reduce((a, i) => a + counts(i).todo, 0), ch = S.checks[n]?.podsumowanie;
         return `<tr class="click" data-case="${esc(n)}"><td><b>${esc(n)}</b></td><td>${its.length}</td><td>${todo ? `<span class="st-warn">${todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${!ch ? '<span class="st-muted">…</span>' : ch.braki ? `<span class="st-bad">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : '<span class="st-ok">bez braków</span>'}</td></tr>`; }).join("")}
     </tbody></table></div></section>` : ""}
+    ${sessionsHtml()}
   </div>`;
+  bindSessions();
   $$("[data-pick]").forEach(b => b.onclick = () => $("#" + b.dataset.pick).click());
   $$("tr[data-case]").forEach(r => r.onclick = () => go("sprawa", { caseName: r.dataset.case }));
   const drop = $("#drop");
@@ -1086,7 +1227,7 @@ function bindLetter(name) {
   const ta = $("#lText"), grow = () => { ta.style.height = "auto"; ta.style.height = Math.max(520, ta.scrollHeight + 4) + "px"; };
   grow();
   const regen = () => { if (!st.edited) { st.tekst = fillLetter(name, st).txt; ta.value = st.tekst; grow(); } };
-  ta.oninput = () => { st.tekst = ta.value; if (!st.edited) { st.edited = true; $("#lEdited").hidden = false; $("#lReset").hidden = false; } grow(); };
+  ta.oninput = () => { st.tekst = ta.value; markDirty(); if (!st.edited) { st.edited = true; $("#lEdited").hidden = false; $("#lReset").hidden = false; } grow(); };
   $("#lSyg").oninput = (e) => { st.syg = e.target.value; regen(); };
   attachDate($("#lDate"), "pl");
   $("#lDate").onchange = (e) => { st.data = e.target.value; regen(); };
@@ -1147,6 +1288,8 @@ function renderControl() {
             <label class="opt"><input type="checkbox" checked disabled>JSON zgodny ze schematami UZP (output/&lt;sprawa&gt;/)</label>
             <label class="opt"><input type="checkbox" id="xLog" checked>Dziennik zmian (CSV)</label>
             <label class="opt"><input type="checkbox" id="xCtl" checked>Raport kontroli formalnej (CSV)</label>
+            <label class="opt"><input type="checkbox" id="xReg">Wiersz do rejestru spraw (CSV)</label>
+            <label class="opt"><input type="checkbox" id="xAnon">Ukryj dane osobowe (imiona i nazwiska, e-maile, telefony, PESEL)</label>
           </div>
           <button class="btn primary" type="button" id="xGo" style="width:100%;margin-top:12px">Pobierz ZIP</button>
         </section>
@@ -1174,7 +1317,9 @@ function renderControl() {
     const inne = [];
     if ($("#xLog").checked) inne.push({ sciezka: `dziennik_zmian_${name}.csv`, tekst: logCsv(S.log.filter(l => l.sprawa === name)) });
     if ($("#xCtl").checked) inne.push({ sciezka: `kontrola_${name}.csv`, tekst: controlCsv(ch) });
-    downloadZip(its, `aktomat_${name}.zip`, inne);
+    if ($("#xReg").checked) inne.push({ sciezka: `rejestr_${name}.csv`, tekst: registerCsv([name]) });
+    const ukryj = $("#xAnon").checked;
+    downloadZip(its, `aktomat_${name}${ukryj ? "_bez_danych_osobowych" : ""}.zip`, inne, { ukryj });
   };
 }
 const csvCell = (v) => { const s = v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
@@ -1242,17 +1387,24 @@ function md(src) {
 const outName = (it) => it.plik.replace(/\.pdf$/i, "") + ".json";
 const outBody = (it) => it.klasa ? JSON.stringify(it.json, null, 2) : (S.status?.pusty_json ?? "{}");
 function save(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
-async function downloadZip(items, name, inne = []) {
+async function downloadZip(items, name, inne = [], opts = {}) {
   const pliki = items.filter(it => !it.pending && !it.blad).map(it => ({ sciezka: (it.sprawa && it.sprawa !== "bez sprawy" ? it.sprawa + "/" : "") + outName(it), json: it.klasa ? it.json : (S.status?.pusty_json ?? "{}") }));
   try {
-    const r = await fetch("/api/zip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pliki, inne }) });
+    const r = await fetch("/api/zip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pliki, inne, ukryj: !!opts.ukryj }) });
     if (!r.ok) throw new Error("HTTP " + r.status);
-    save(await r.blob(), name); say(`Pobrano ${pliki.length} plików JSON w archiwum ZIP.`);
+    save(await r.blob(), name); say(`Pobrano ${pliki.length} plików JSON w archiwum ZIP${opts.ukryj ? " (bez danych osobowych)" : ""}.`);
   } catch (e) { say("Nie udało się przygotować archiwum: " + e.message); }
 }
-$("#zipAll").onclick = () => downloadZip(S.items, "wyniki_aktomat.zip", S.log.length ? [{ sciezka: "dziennik_zmian.csv", tekst: logCsv(S.log) }] : []);
+$("#zipAll").onclick = () => downloadZip(S.items, "wyniki_aktomat.zip", [{ sciezka: "rejestr_spraw.csv", tekst: registerCsv(caseNames()) }, ...(S.log.length ? [{ sciezka: "dziennik_zmian.csv", tekst: logCsv(S.log) }] : [])]);
 
 drawNav(); render();
+fetch("/api/eksport").then(r => r.json()).then(c => { S.eksport = c; }).catch(() => {});
+loadSessions().then(async (list) => {
+  let last = null; try { last = localStorage.getItem("aktomat-sid"); } catch (e) {}
+  if (last && list.some(x => x.id === last) && !S.items.length) await openSession(last, true);
+  else if (S.view === "start") render();
+  if (!S.who) openWho();
+});
 </script>
 </body>
 </html>

@@ -1,0 +1,36 @@
+# Eksport sprawy: ukrywanie danych osobowych i rejestr spraw (GUI: "Kontrola formalna" -> "Eksport sprawy",
+# "Pobierz wszystko"). Wszystko tutaj jest konfiguracją; silnik: odw2json/anonymize.py.
+
+# Ukrywanie danych osobowych w eksportowanym ZIP-ie (JSON, dziennik zmian, raport kontroli).
+dane_osobowe:
+  zastapienie: "[UKRYTE]"
+  # Pola ukrywane w całości, po nazwie ostatniego członu ścieżki (jak w `walidacja` w kontrola.yaml).
+  # Wartości tych pól są też wyszukiwane i ukrywane w pozostałych tekstach sprawy
+  # (np. nazwisko pełnomocnika w tytule przelewu).
+  pola: [imie_nazwisko, mail, pesel]
+  # Wzorce ukrywane w każdym tekście (regex). Grupa (?P<v>...) = ukryj tylko ten fragment.
+  wzorce:
+    - '[\w.+-]+@[\w-]+(?:\.[\w-]+)+'                                          # e-mail
+    - '(?i)\b(?:tel|telefon|tel\. kom|kom)\.?\s*:?\s*(?P<v>\+?[\d][\d \-]{7,}\d)'  # telefon po etykiecie
+    - '(?i)\bPESEL\s*:?\s*(?P<v>\d{11})\b'                                    # PESEL po etykiecie
+
+# Rejestr spraw (CSV do arkusza): jeden wiersz na sprawę.
+#   wartosc: sprawa | referent | dokumenty | do_sprawdzenia | braki | pominiete | termin | stan
+#   klasa + pole: wartość z dokumentu danej klasy (pierwszy dokument w sprawie)
+rejestr:
+  kolumny:
+    - {naglowek: Sprawa, wartosc: sprawa}
+    - {naglowek: Odwołujący, klasa: odwolanie, pole: "Odwolujacy[0].nazwa"}
+    - {naglowek: NIP odwołującego, klasa: odwolanie, pole: "Odwolujacy[0].nip"}
+    - {naglowek: Zamawiający, klasa: odwolanie, pole: "Zamawiajacy[0].nazwa"}
+    - {naglowek: Nr postępowania, klasa: odwolanie, pole: ZamowieniePubliczne.numer_postepowania}
+    - {naglowek: Nr ogłoszenia BZP, klasa: odwolanie, pole: ZamowieniePubliczne.numer_bzp}
+    - {naglowek: Data czynności, klasa: odwolanie, pole: OdwolanieKIO.czynnosc_dzien}
+    - {naglowek: Ostatni dzień na odwołanie, wartosc: termin}
+    - {naglowek: Kwota przelewu, klasa: przelew, pole: przelew_bankowy.kwota}
+    - {naglowek: Dokumenty, wartosc: dokumenty}
+    - {naglowek: Pola do sprawdzenia, wartosc: do_sprawdzenia}
+    - {naglowek: Braki formalne, wartosc: braki}
+    - {naglowek: Pominięte przez referenta, wartosc: pominiete}
+    - {naglowek: Stan, wartosc: stan}
+    - {naglowek: Referent, wartosc: referent}
