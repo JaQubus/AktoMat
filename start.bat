@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-rem Odwolania2JSON - uruchomienie:  start.bat [run^|web^|eval --gt KATALOG^|classes] [opcje]
+rem AktoMat - uruchomienie:  start.bat [run^|web^|eval --gt KATALOG^|classes] [opcje]
 if not exist .venv (
   py -3.13 -m venv .venv 2>nul || python -m venv .venv
 )

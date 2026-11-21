@@ -1,4 +1,4 @@
-# Odwołania2JSON
+# AktoMat
 
 **Od dokumentów do danych.** Aplikacja zamienia dokumenty sprawy odwoławczej przed KIO (odwołanie, pełnomocnictwo, potwierdzenie przelewu) w pliki JSON zgodne ze schematami UZP z [hacknation-2026](https://github.com/Urzad-Zamowien-Publicznych/hacknation-2026).
 

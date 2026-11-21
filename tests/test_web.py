@@ -62,3 +62,24 @@ def test_folder_sprawy_i_klasy(client):
     assert {"odwolanie", "pelnomocnictwo", "przelew"} <= set(klasy)
     assert json.dumps(klasy["przelew"]["szablon"]) and klasy["przelew"]["pola"]
     assert client.get("/api/pdf/..%2F..").status_code == 404
+
+
+def test_zaznaczanie_wartosci_rozmyte():
+    from odw2json.locate import match
+
+    words = [(0.1, 0.1, 0.15, 0.12, "NIP:"), (0.16, 0.1, 0.3, 0.12, "999-928-40-65,"),
+             (0.31, 0.1, 0.4, 0.12, "REGON:"), (0.1, 0.2, 0.2, 0.22, "Belmoria"), (0.21, 0.2, 0.4, 0.22, "Rozwiqzania")]
+    score, rects = match(words, "9999284065")
+    assert score >= 99 and rects == [[0.16, 0.1, 0.3, 0.12]]
+    score, rects = match(words, "Belmoria Rozwiązania")  # błąd OCR "q" zamiast "ą"
+    assert score >= 85 and rects == [[0.1, 0.2, 0.4, 0.22]]
+    assert match(words, "Zupełnie inna firma")[1] == []
+
+
+def test_szukaj_na_drugiej_stronie(client, tmp_path):
+    doc = pymupdf.open()
+    doc.new_page().insert_text((50, 60), "Strona pierwsza", fontsize=10)
+    doc.new_page().insert_text((50, 700), "Numer ogloszenia: 2026/BZP 00123456", fontsize=10)
+    res = client.post("/api/extract", files={"files": ("x.pdf", doc.tobytes(), "application/pdf")}).json()[0]
+    hit = client.get(f"/api/szukaj/{res['id']}", params={"q": ["2026/BZP00123456"], "strona": 1}).json()
+    assert hit["strona"] == 2 and hit["prostokaty"] and hit["prostokaty"][0][1] > 0.7
