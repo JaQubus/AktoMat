@@ -13,6 +13,10 @@ import pymupdf
 log = logging.getLogger(__name__)
 # Tesseract domyślnie używa wielu wątków OpenMP; przy równoległych dokumentach to drastycznie spowalnia OCR.
 os.environ.setdefault("OMP_THREAD_LIMIT", "1")
+# tessdata w folderze aplikacji (start.bat pobiera tam pol.traineddata, gdy instalacja Tesseracta go nie ma)
+_LOCAL_TESSDATA = Path(__file__).resolve().parent.parent / "tessdata"
+if not os.environ.get("TESSDATA_PREFIX") and (_LOCAL_TESSDATA / "pol.traineddata").exists():
+    os.environ["TESSDATA_PREFIX"] = str(_LOCAL_TESSDATA)
 
 
 @dataclass

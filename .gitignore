@@ -11,3 +11,4 @@ input/*
 !input/.gitkeep
 trace/
 eval_report/
+tessdata/

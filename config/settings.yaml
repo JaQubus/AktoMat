@@ -8,7 +8,7 @@ llm:
   model: gpt-oss-120b
   temperature: 0
   max_tokens: 6000
-  timeout: 180
+  timeout: 90               # sekundy na jedno zapytanie
   retries: 3
   json_mode: true
   max_doc_chars: 24000      # ile tekstu dokumentu trafia do modelu (kluczowe dane są na pierwszych stronach)
@@ -42,5 +42,8 @@ ocr:
 
 classify_head_chars: 6000   # klasyfikacja na podstawie początku dokumentu
 workers: 4                  # równoległe dokumenty
+# UZP: 150 PDF w maks. 45 min. Po tym czasie (od startu partii) LLM jest pomijany i zostają same reguły,
+# żeby partia zawsze skończyła się w limicie. Uwaga: budżet liczy się dla całego uruchomienia `run`.
+time_budget_s: 2400
 # Dokument spoza skonfigurowanych klas: zawartość pliku .json (UZP: "pusty plik .json"); null = nie twórz pliku
 unknown_output: "{}"

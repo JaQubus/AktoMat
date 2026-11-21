@@ -83,7 +83,7 @@ class LLMClient:
                                   timeout=float(self.cfg.get("timeout", 120)))
         return self._client
 
-    def extract(self, cls: DocClass, doc_text: str) -> tuple[dict, dict]:
+    def extract(self, cls: DocClass, doc_text: str, deadline: float | None = None) -> tuple[dict, dict]:
         """Zwraca (json, meta). meta zawiera model, czas i zużycie tokenów do śladu."""
         prompt = build_prompt(cls, doc_text)
         msgs = [{"role": "system", "content": self.cfg.get("system_prompt") or DEFAULT_SYSTEM},
@@ -98,6 +98,11 @@ class LLMClient:
         last = None
         for attempt in range(int(self.cfg.get("retries", 3))):
             t0 = time.time()
+            if deadline is not None:
+                left = deadline - t0
+                if left < 5:
+                    raise LLMError("pominięty: wyczerpany limit czasu przetwarzania (time_budget_s)")
+                kwargs["timeout"] = min(float(self.cfg.get("timeout", 120)), left)
             try:
                 r = self.client.chat.completions.create(**kwargs)
                 content = r.choices[0].message.content or ""
@@ -114,5 +119,8 @@ class LLMClient:
                 if "response_format" in msg or "json_object" in msg or attempt >= 1:
                     kwargs.pop("response_format", None)
                 log.warning("LLM próba %s nieudana: %s", attempt + 1, msg[:200])
-                time.sleep(min(2 ** attempt * 2, 20))
+                pause = min(2 ** attempt * 2, 20)
+                if deadline is not None and time.time() + pause > deadline:
+                    break
+                time.sleep(pause)
         raise LLMError(f"LLM niedostępny: {last}")
