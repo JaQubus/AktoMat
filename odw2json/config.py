@@ -79,8 +79,10 @@ def load_settings() -> dict:
     # zwykłe LLM_* zostają w .env obok i wracają po usunięciu LLM_PROFILE.
     name = (os.environ.get("LLM_PROFILE") or "").strip()
     if name:
-        prof = (llm.get("profiles") or {}).get(name.lower(), {})
+        prof = dict((llm.get("profiles") or {}).get(name.lower(), {}))
         env = lambda k: os.environ.get(f"{name.upper()}_{k}")
+        # pozostałe klucze profilu (np. max_tokens, max_doc_chars pod limity darmowego planu) nadpisują llm
+        llm.update({k: v for k, v in prof.items() if k not in ("base_url", "model", "api_key")})
         llm["base_url"] = env("BASE_URL") or prof.get("base_url") or llm["base_url"]
         llm["model"] = env("MODEL") or prof.get("model") or llm["model"]
         llm["api_key"] = env("API_KEY") or llm["api_key"]
