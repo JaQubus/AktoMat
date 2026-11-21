@@ -12,7 +12,7 @@ prefer: rules
 classify:
   min_score: 5
   filename_hints: [odwolan, odwołan]
-  filename_weight: 1
+  filename_weight: 0   # UZP: nie sugerować się nazwą pliku (bywają podróbki); podpowiedź tylko w śladzie
   keywords:
     - {pattern: '\bodwolanie\b|o d w o l a n i e', weight: 3}
     - {pattern: 'odwolujac', weight: 3}
@@ -26,6 +26,10 @@ classify:
     - {pattern: 'potwierdzenie (wykonania )?(przelewu|operacji)|rachunek (nadawcy|odbiorcy|zleceniodawcy)', weight: 4}
     - {pattern: 'krajowa izba odwolawcza\s*-?\s*w skladzie|\borzeka\s*:|przewodniczac\w*\s*:|protokolant|w imieniu rzeczypospolitej', weight: 8}
     - {pattern: 'see the notice on ted website|ogloszenie o zamowieniu.{0,40}tryb standardowy', weight: 6}
+    # pisma z tej samej sprawy, ale NIE odwołanie (podróbki / inne dokumenty postępowania odwoławczego)
+    - {pattern: 'odpowiedz\w* na odwolanie|zglasza\w* przystapienie|przystapienie do postepowania odwolawczego', weight: 12}
+    - {pattern: 'skarg\w* na (wyrok|orzeczenie|postanowienie)|sad okregowy w warszawie[^a-z]+xxiii|sad zamowien publicznych', weight: 12}
+    - {pattern: 'wzor odwolania|\[\s*(nazwa|imie|adres|data)\b', weight: 12}
 
 # --- Wzorzec wyniku (struktura 1:1 z oczekiwane-json/odwolanie.json) ---
 output_template:
@@ -81,11 +85,13 @@ sections:
     end: '(?m)^\s*(?:\d\)\s*)?(?:Zamawiając\w*[^\n:]{0,80}:|ODWOŁANIE|O D W O|[Dd]otyczy|Działając|Wykonawca wybrany|Uczestnik)'
     flags: ''
     max_chars: 1500
+    before: &tresc 'Działając\s+na\s+podstawie|wnosz\w*\s+odwołanie'   # blok stron jest w nagłówku, nie w uzasadnieniu
   zamawiajacy:
     start: '(?m)^\s*(?:\d\)\s*)?Zamawiając\w*[^\n:]{0,140}(?:\n[^\n:]{0,80})?:'
     end: '(?m)^\s*(?:Odwołując\w*[^\n:]{0,80}:|ODWOŁANIE|O D W O|[Dd]otyczy|Działając|Wykonawca wybrany|Uczestnik|Wartość zamówienia|Nr ogłoszenia)'
     flags: ''
     max_chars: 1500
+    before: *tresc
   dotyczy: {start: '[Dd]otyczy|DOTYCZY', end: 'Działając|Zarzut|ODWOŁANIE\s*\n\s*Działając', flags: '', max_chars: 2500}
 
 # --- Listy wielu podmiotów: sekcja dzielona na bloki, każdy blok = jeden element listy ---
@@ -117,6 +123,7 @@ fields:
   - path: OdwolanieKIO.miejscowosc
     type: string
     description: Miejscowość z nagłówka pierwszej strony (np. "Pruszków").
+    vocabulary: slowniki/miejscowosci.txt   # "Krakow" ze skanu -> "Kraków"
     rules:
       - pattern: '(?m)^\s*(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:[ -][A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż]+){0,2}?)(?:\s*,\s*(?:dnia\s+|dn\.\s*)?|\s+dnia\s+)(?:\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4}|\d{4}-\d{2}-\d{2})'
         flags: m
@@ -165,6 +172,8 @@ fields:
     rules:
       - {kind: entity_name, section: odwolujacy, after: 'Lider\w*(?:\s+Konsorcjum)?\s*:'}
       - {kind: entity_name, section: odwolujacy, skip: 'konsorcj|lider|^\d\)\s*$'}
+      # pismo bez bloku "Odwołujący:" - nazwa w zdaniu "w imieniu wykonawcy „X” sp. z o.o., wnoszę odwołanie"
+      - {pattern: 'w\s+imieniu\s+(?:wykonawcy|Odwołującego)\s*:?\s*[,„"]{0,3}(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ0-9][^\n]{2,150}?)\s*,\s*(?:wnosz|z\s+siedzib|ul\.)', flags: ''}
 
   - path: Odwolujacy[*].krs
     type: krs
@@ -187,7 +196,7 @@ fields:
   - path: Odwolujacy[*].przez-pelnomocnika
     type: flag
     description: 1 jeśli odwołujący działa przez pełnomocnika, 0 jeśli nie.
-    derive: {kind: notnull_flag, from: 'Odwolujacy[*].pelnomocnik.imie_nazwisko'}
+    derive: {kind: notnull_flag, from: ['Odwolujacy[*].pelnomocnik.imie_nazwisko', 'Odwolujacy[*].pelnomocnik.nazwa']}
 
   - path: Odwolujacy[*].pelnomocnik.imie_nazwisko
     type: person
@@ -202,6 +211,8 @@ fields:
     rules:
       - {pattern: 'adres\s+do\s+korespondencji\s*:\s*(?P<v>.+?)\s*,\s*(?:ul\.|al\.|pl\.|os\.)', section: odwolujacy, flags: is}
       - {pattern: '(?P<v>Kancelari\w+[^,\n]*)', section: odwolujacy, flags: ''}
+      # bez bloku "Odwołujący:" - kancelaria w linii zaraz po "reprezentowany przez ..."
+      - {pattern: 'reprezentowan\w*\s+przez[^\n]*\n\s*(?P<v>Kancelari\w+[^,\n]*)', section: naglowek, flags: ''}
 
   - path: Odwolujacy[*].pelnomocnik.mail
     type: email
@@ -214,6 +225,8 @@ fields:
     description: Pełna nazwa zamawiającego.
     rules:
       - {kind: entity_name, section: zamawiajacy, skip: 'zamawiając|lider|partner|^\d\)\s*$'}
+      # układ "nazwa nad etykietą": 1-2 linie bez dwukropka tuż przed samotną linią "Zamawiający"
+      - {pattern: '(?m)^(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][^\n:]{3,200}(?:\n[^\n:]{3,200})?)\n\s*Zamawiając\w*\s*$', section: naglowek, flags: ''}
 
   - path: Zamawiajacy[*].krs
     type: krs
@@ -269,6 +282,6 @@ fields:
     type: text
     description: Tytuł (nazwa) zamówienia.
     rules:
-      - {pattern: '\bpn\.?\s*:?\s*[„"](?P<v>[^”"]{5,400})[”"]', flags: s}
+      - {pattern: '\bpn\.?\s*:?\s*(?:[„"]|,{1,2}(?=[A-ZĄĆĘŁŃÓŚŹŻ]))(?P<v>[^”"]{5,400})[”"]', flags: s}   # OCR czyta „ jako ,
       - {pattern: 'pod\s+nazwą\s*:?\s*[„"](?P<v>[^”"]{5,400})[”"]', flags: is}
       - {pattern: 'przedmiotem\s+(?:jest|zamówienia\s+jest)\s*:?\s*[„"](?P<v>[^”"]{5,400})[”"]', flags: is}

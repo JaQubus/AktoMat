@@ -57,6 +57,20 @@ def n_string(v):
     return s or None
 
 
+def n_name(v):
+    """Nazwa podmiotu: zaczyna się wielką literą, cyfrą albo cudzysłowem.
+    Fragment zdania ("art. 16 ustawy...", "w imieniu ...") to nie nazwa - odrzucamy, bo dałby FP."""
+    s = n_string(v)
+    if not s:
+        return None
+    first = s.lstrip("„”\"'(")[:1]
+    if first.islower():
+        return None
+    if sum(s.count(c) for c in '"„”“') == 1:
+        s = ws(re.sub(r'["„”“]', "", s))   # osierocony cudzysłów (drugi ucięty przez OCR / strip)
+    return s
+
+
 def n_person(v):
     s = n_string(v)
     if not s:
@@ -180,7 +194,7 @@ def n_refno(v):
 
 
 NORMALIZERS = {
-    "string": n_string, "text": n_string, "name": n_string, "person": n_person,
+    "string": n_string, "text": n_string, "name": n_name, "person": n_person,
     "int": n_int, "enum": n_int, "flag": n_int,
     "date": n_date, "amount": n_amount,
     "nip": _fixed_digits(10), "krs": _fixed_digits(10), "regon": n_regon,

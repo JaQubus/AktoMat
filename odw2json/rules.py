@@ -96,6 +96,12 @@ def section_text(text: str, sections: dict, name: str | None) -> str:
         return text
     flags = _flags(sec.get("flags", "i"))
     starts = list(rx(sec["start"], flags).finditer(text))
+    if sec.get("before"):
+        # sekcja musi zaczynać się przed pierwszym wystąpieniem wzorca (np. przed treścią pisma),
+        # żeby etykieta powtórzona w uzasadnieniu nie dawała fałszywego bloku
+        mb = rx(sec["before"], flags).search(text)
+        if mb:
+            starts = [m for m in starts if m.start() < mb.start()]
     if not starts:
         return ""
     occ = int(sec.get("occurrence", 0))

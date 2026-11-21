@@ -2,7 +2,7 @@
 
 **Od dokumentów do danych.** Aplikacja zamienia dokumenty sprawy odwoławczej przed KIO (odwołanie, pełnomocnictwo, potwierdzenie przelewu) w pliki JSON zgodne ze schematami UZP z [hacknation-2026](https://github.com/Urzad-Zamowien-Publicznych/hacknation-2026).
 
-- rozpoznaje rodzaj dokumentu po treści (nie po nazwie pliku), dokumenty spoza klas pomija,
+- rozpoznaje rodzaj dokumentu po treści (nazwa pliku nie ma wpływu), a dokumenty spoza klas i podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wyrok KIO, pusty wzór, ogłoszenie) dostają pusty JSON `{}`,
 - czyta PDF-y z warstwą tekstową i skany (OCR Tesseract, język polski),
 - łączy reguły deterministyczne z otwartym modelem językowym (GPT-OSS-120B przez API w UE) i odrzuca wartości, których nie ma w dokumencie,
 - dla każdego pola zapisuje ślad: skąd pochodzi wartość (LLM, reguła, wyliczenie), strona i cytat,
@@ -75,7 +75,7 @@ Domyślny dostawca to **Scaleway Generative APIs (Paryż, UE)**, zgodnie z wymog
 
 ```
 PDF ──► tekst stron (PyMuPDF; strona bez tekstu ► OCR: Tesseract pol, zapasowo RapidOCR)
-    ──► klasyfikacja (ważone wzorce z YAML, próg; brak klasy ► pusty JSON)
+    ──► klasyfikacja (ważone wzorce z YAML, wzorce negatywne dla podróbek, próg; brak klasy ► pusty JSON `{}`)
     ──► reguły deterministyczne (regex, sekcje, bloki podmiotów)  ┐
     ──► LLM: prompt zbudowany z opisów pól w YAML ► JSON          ├► wybór wartości pole po polu
     ──► normalizacja (daty ISO, kwoty, NIP/KRS/rachunki = cyfry)  ┘   + weryfikacja w tekście
@@ -83,6 +83,8 @@ PDF ──► tekst stron (PyMuPDF; strona bez tekstu ► OCR: Tesseract pol, za
 ```
 
 **Wybór wartości.** Dla każdego pola brana jest wartość z LLM, o ile ma poprawny format i **występuje w tekście dokumentu** (dla nazwisk z tolerancją na odmianę). W przeciwnym razie wartość z reguł, a jeśli i jej nie ma: `null`. Uzasadnienie: w ocenie UZP wpisanie wartości tam, gdzie wzorzec ma `null`, to FP, a `null` przy pustym wzorcu to TN. Zgadywanie się nie opłaca. Rozbieżności LLM vs reguły trafiają do śladu jako uwagi.
+
+**Skany.** Tekst z OCR bywa bez polskich znaków (RapidOCR) i z innym układem (nazwa podmiotu nad etykietą „Zamawiający”, cudzysłów odczytany jako przecinek). Wzorce w YAML dopasowują litery z ogonkiem i bez, blok stron jest szukany tylko w nagłówku pisma (opcja sekcji `before`), a pole typu `name` odrzuca fragmenty zdań (np. „art. 16 ustawy…”). Gdy reguła i LLM dają tę samą wartość, a LLM odtworzył polskie znaki, bierzemy wersję z LLM.
 
 **Transparentność.** `trace/<sprawa>/<plik>.trace.json` zawiera punktację klasyfikacji, strony przepuszczone przez OCR, czas i model LLM oraz dla każdego pola: wartość, źródło, regułę, stronę i cytat. GUI pokazuje to obok podglądu PDF; kliknięcie pola przewija PDF do strony źródłowej.
 
@@ -119,7 +121,7 @@ fields:
     description: Termin na uzupełnienie w dniach.
 ```
 
-Pole bez `rules` jest wypełniane przez LLM (i weryfikowane), pole z `rules` ma dodatkowo deterministyczny zapas. Dostępne typy pól: `string, text, name, person, int, enum, flag, date, amount, nip, krs, regon, pesel, account, email, bzp, ted, refno`. Rodzaje reguł: `regex, sentence_map, titled_persons, signatories, entity_name, first_line, const` (opis w `odw2json/rules.py`). Opcje pola: `prefer: llm|rules`, `require_grounding`, `derive` (pola wyliczane), `cast`. Sekcje dokumentu (`sections`) i podział na wiele podmiotów (`lists`) też są w YAML. Zobacz `config/classes/odwolanie.yaml` jako pełny przykład.
+Pole bez `rules` jest wypełniane przez LLM (i weryfikowane), pole z `rules` ma dodatkowo deterministyczny zapas. Dostępne typy pól: `string, text, name, person, int, enum, flag, date, amount, nip, krs, regon, pesel, account, email, bzp, ted, refno`. Rodzaje reguł: `regex, sentence_map, titled_persons, signatories, entity_name, first_line, const` (opis w `odw2json/rules.py`). Opcje pola: `prefer: llm|rules`, `require_grounding`, `derive` (pola wyliczane, `from` może być listą pól), `cast`, `vocabulary` (słownik poprawnych zapisów, np. `config/slowniki/miejscowosci.txt`: „Krakow” ze skanu → „Kraków”). Sekcje dokumentu (`sections`, z opcjami `end`, `max_chars`, `before`) i podział na wiele podmiotów (`lists`) też są w YAML. Podróbki odcina się wzorcami `classify.negative`. Zobacz `config/classes/odwolanie.yaml` jako pełny przykład.
 
 ## Jakość
 
@@ -130,8 +132,11 @@ Ewaluacja liczy F1 dokładnie według definicji UZP: TP = wartość zgodna (dłu
 | 60 spraw treningowych UZP (PDF z tekstem) | same reguły, bez LLM | 1.000 |
 | 12 z tych spraw zamienionych na skany 150 dpi, OCR Tesseract | same reguły, bez LLM | 0.963 |
 | j.w., zapasowy OCR RapidOCR (bez Tesseract) | same reguły, bez LLM | 0.915 |
+| 8 spraw jako skany 150 dpi w skali szarości, RapidOCR | same reguły, bez LLM | 0.933 (przed poprawkami skanów: 0.911) |
 | klasyfikacja 60 spraw + 16 dokumentów negatywnych UZP | | 196/196 |
-| j.w. | reguły + LLM (gpt-oss-120b) | do zmierzenia: `python -m odw2json eval --gt ...` z kluczem w `.env` |
+| podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wzór) i dokument z mylącą nazwą pliku | testy `tests/test_robustness.py` | wszystkie `{}` / właściwa klasa |
+| 60 spraw treningowych | reguły + mistral-small-3.2-24b | 0.9988 |
+| j.w. | reguły + LLM (gpt-oss-120b) | 0.9995 |
 
 Wynik na danych treningowych jest optymistyczny, bo reguły były strojone na tych samych szablonach. Prawdziwe odwołania są pisane swobodnie i tam główną robotę wykonuje LLM, a reguły działają jako weryfikacja i zapas.
 
