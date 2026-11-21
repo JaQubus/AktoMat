@@ -11,6 +11,7 @@ import json
 import re
 import shutil
 import tempfile
+import threading
 import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -20,6 +21,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 
 from .config import ROOT
+from .locate import locate, page_words
 from .pipeline import Engine
 
 STATIC = Path(__file__).parent / "static"
@@ -28,7 +30,7 @@ UPLOADS.mkdir(parents=True, exist_ok=True)
 REPORT = ROOT / "eval_report" / "raport.md"
 MAX_ZIP_FILES = 500
 
-app = FastAPI(title="Odwołania2JSON", version="1.1")
+app = FastAPI(title="AktoMat", version="1.2")
 _engine: Engine | None = None
 _sem: asyncio.Semaphore | None = None
 
@@ -105,6 +107,8 @@ async def _process(p: Path, fid: str, case: str, rel: str) -> dict:
             r = await run_in_threadpool(engine().process, p)
         except Exception as e:  # noqa: BLE001 - jeden zły plik nie zatrzymuje partii
             return {"id": fid, "plik": p.name, "sprawa": case, "sciezka": rel, "blad": str(e)}
+    if r.trace.get("ocr_strony"):
+        _prefetch_words(p, r.trace["ocr_strony"])
     return {"id": fid, "plik": p.name, "sprawa": case, "sciezka": rel,
             "klasa": r.doc_class, "json": r.data, "slad": r.trace}
 
@@ -194,25 +198,26 @@ def info(fid: str):
 
 @app.get("/api/szukaj/{fid}")
 def szukaj(fid: str, q: list[str] = Query(default=[]), strona: int = 0):
-    """Położenie fragmentu tekstu na stronie (prostokąty w ułamkach szerokości/wysokości strony).
-    Próbuje kolejnych wariantów `q` (np. surowy zapis z dokumentu, potem wartość), najpierw na podanej stronie.
-    Na skanach bez warstwy tekstowej zwraca pustą listę — wtedy GUI tylko przewija do strony."""
-    import pymupdf as fitz
+    """Położenie fragmentu tekstu na stronie: prostokąty w ułamkach szerokości/wysokości strony.
+    Działa na warstwie tekstowej i na skanach (ramki słów z OCR). Kolejne `q` to warianty od najlepszego
+    (surowy zapis z dokumentu, wartość, fragment cytatu); najpierw szuka na stronie `strona`."""
+    import pymupdf
 
-    with fitz.open(_pdf_path(fid)) as doc:
-        order = ([strona - 1] if 1 <= strona <= doc.page_count else []) + \
-                [i for i in range(doc.page_count) if i != strona - 1]
-        for text in q:
-            text = " ".join(str(text).split())[:120]
-            if len(text) < 2:
-                continue
-            for i in order:
-                page = doc[i]
-                hits = page.search_for(text)
-                if hits:
-                    W, H = page.rect.width, page.rect.height
-                    return {"strona": i + 1, "prostokaty": [[r.x0 / W, r.y0 / H, r.x1 / W, r.y1 / H] for r in hits[:8]]}
-    return {"strona": strona or None, "prostokaty": []}
+    p = _pdf_path(fid)
+    with pymupdf.open(p) as doc:
+        n = doc.page_count
+    return locate(p, q, strona, engine().settings, n)
+
+
+def _prefetch_words(p: Path, pages: list[int]):
+    """W tle: OCR z ramkami dla stron-skanów, żeby pierwsze kliknięcie pola nie czekało na OCR."""
+    def run():
+        for n in pages:
+            try:
+                page_words(p, n - 1, engine().settings)
+            except Exception:  # noqa: BLE001
+                pass
+    threading.Thread(target=run, daemon=True).start()
 
 
 @app.post("/api/zip")
@@ -235,4 +240,4 @@ def eksport_zip(pliki: list[dict] = Body(..., embed=True)):
             zf.writestr("output/" + rel, body)
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
-                             headers={"Content-Disposition": 'attachment; filename="wyniki_odwolania2json.zip"'})
+                             headers={"Content-Disposition": 'attachment; filename="wyniki_aktomat.zip"'})
