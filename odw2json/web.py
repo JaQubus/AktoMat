@@ -21,6 +21,7 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 
 from .config import ROOT
+from .checks import load_rules, run_checks
 from .locate import locate, page_words
 from .pipeline import Engine
 
@@ -220,9 +221,22 @@ def _prefetch_words(p: Path, pages: list[int]):
     threading.Thread(target=run, daemon=True).start()
 
 
+@app.post("/api/kontrola")
+def kontrola(dokumenty: list[dict] = Body(..., embed=True), dni: dict | None = Body(None, embed=True)):
+    """Kontrola formalna teczki: [{"plik", "klasa", "json"}] -> kompletność, zgodność, terminy, walidacja.
+    Reguły: config/kontrola.yaml. `dni` nadpisuje liczbę dni terminu, np. {"odwolanie": 5}."""
+    return run_checks(dokumenty, load_rules(), dni)
+
+
+@app.get("/api/kontrola/reguly")
+def kontrola_reguly():
+    return load_rules()
+
+
 @app.post("/api/zip")
-def eksport_zip(pliki: list[dict] = Body(..., embed=True)):
-    """ZIP z wynikami: [{"sciezka": "sprawa/plik.json", "json": {...}}] -> output/<sprawa>/<plik>.json"""
+def eksport_zip(pliki: list[dict] = Body(..., embed=True), inne: list[dict] | None = Body(None, embed=True)):
+    """ZIP z wynikami: [{"sciezka": "sprawa/plik.json", "json": {...}}] -> output/<sprawa>/<plik>.json.
+    `inne`: dodatkowe pliki tekstowe w katalogu głównym ZIP-a, np. [{"sciezka": "dziennik_zmian.csv", "tekst": "..."}]."""
     buf = io.BytesIO()
     used = set()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -238,6 +252,10 @@ def eksport_zip(pliki: list[dict] = Body(..., embed=True)):
             data = item.get("json")
             body = data if isinstance(data, str) else json.dumps(data, ensure_ascii=False, indent=2)
             zf.writestr("output/" + rel, body)
+        for item in inne or []:
+            name = str(_safe_rel(str(item.get("sciezka", "plik.txt"))))
+            if name.lower().endswith((".csv", ".txt", ".md")):
+                zf.writestr(name, "\ufeff" + str(item.get("tekst", "")) if name.endswith(".csv") else str(item.get("tekst", "")))
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": 'attachment; filename="wyniki_aktomat.zip"'})
