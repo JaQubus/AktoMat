@@ -63,7 +63,7 @@ Konfiguracja w `.env` (szablon: `.env.example`), domyślnie:
 
 Domyślny dostawca to **Scaleway Generative APIs (Paryż, UE)**, zgodnie z wymogiem FAQ: usługodawca i serwer w UE, model z możliwością instalacji lokalnej. Ten sam kod działa z lokalnym serwerem (vLLM, Ollama) po zmianie `LLM_BASE_URL` i `LLM_MODEL`. Gdy LLM jest niedostępny, aplikacja nie przerywa pracy: zwraca wynik z reguł i zapisuje błąd w śladzie.
 
-Do darmowych testów i ewaluacji można użyć **Groq** (`LLM_BASE_URL=https://api.groq.com/openai/v1`, `LLM_MODEL=openai/gpt-oss-120b`, ten sam model open-weight). Groq jest firmą z USA, więc w zgłoszeniu do UZP zostaje dostawca z UE.
+Do darmowych testów i ewaluacji można użyć **Groq** (ten sam model open-weight gpt-oss-120b): w `.env` dopisz `LLM_PROFILE=groq` i `GROQ_API_KEY=gsk_...`, a linie Scaleway (`LLM_*`) zostaw. Usunięcie `LLM_PROFILE` wraca do Scaleway. Groq jest firmą z USA, więc w zgłoszeniu do UZP zostaje dostawca z UE.
 
 ## Wykorzystany model językowy
 

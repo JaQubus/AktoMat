@@ -14,6 +14,11 @@ llm:
   max_doc_chars: 24000      # ile tekstu dokumentu trafia do modelu (kluczowe dane są na pierwszych stronach)
   extra_body:
     reasoning_effort: medium
+  # Profile wybierane w .env przez LLM_PROFILE=<nazwa>; klucz/URL/model z <NAZWA>_API_KEY / _BASE_URL / _MODEL.
+  profiles:
+    groq:                   # darmowy limit, tylko do testów (firma z USA; w zgłoszeniu zostaje Scaleway)
+      base_url: https://api.groq.com/openai/v1
+      model: openai/gpt-oss-120b
 
 ocr:
   enabled: true
