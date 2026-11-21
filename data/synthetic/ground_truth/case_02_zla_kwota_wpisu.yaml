@@ -1,0 +1,49 @@
+# case_02_zla_kwota_wpisu: Wpis 7 500 zł zamiast 15 000 zł (powyżej progu UE)
+# DANE FIKCYJNE. Założenie: shift_weekend_holiday=true
+version: 2
+min_similarity: 0.55
+assert:
+  naglowek.sygnatura: null
+  naglowek.braki_formalne: true
+  informacje_ogolne.zamowienie: 'Dostawy: Dostawa pojazdów specjalistycznych dla jednostek ochrony przeciwpożarowej'
+  informacje_ogolne.tryb_postepowania: Przetarg nieograniczony
+  informacje_ogolne.publikator: 'TED powyżej progu UE: 489891-2025'
+  informacje_ogolne.czynnosc: 'Czynność z dnia 2026-01-12: wybór oferty najkorzystniejszej'
+  informacje_ogolne.termin_na_wniesienie: '2026-01-22'
+  informacje_ogolne.wniesione_w_terminie: true
+  informacje_ogolne.wpis.wymagane: 15000.0
+  informacje_ogolne.wpis.wniesione: 7500.0
+  informacje_ogolne.wpis.data_wplaty: '2026-01-20'
+  informacje_ogolne.wpis.prawidlowy: false
+  odwolujacy.konsorcjum: false
+  odwolujacy.nazwa: Nordwik Logistyka S.A.
+  odwolujacy.forma_prawna: Spółka akcyjna
+  odwolujacy.adres.ulica: ul. Portowa 7
+  odwolujacy.adres.kod_pocztowy: 80-001
+  odwolujacy.adres.miasto: Gdańsk
+  odwolujacy.email: biuro@nordwik-logistyka.example
+  odwolujacy.telefon: +48 58 555 02 02
+  odwolujacy.nip: '9992898321'
+  odwolujacy.regon: '991557360'
+  odwolujacy.krs: 0009000111
+  odwolujacy.bae: null
+  odwolujacy.epuap: /nordwiklogistyka/SkrytkaESP
+  reprezentacja.zasady: Do składania oświadczeń woli w imieniu Spółki upoważniony jest każdy Członek Zarządu samodzielnie
+  reprezentacja.organ: ZARZĄD
+  reprezentacja.podpisujacy.imie_nazwisko: Ewelina Kozłowska-Mazur
+  reprezentacja.podpisujacy.typ_podpisu: niekwalifikowany
+  reprezentacja.podpisujacy.data_podpisu: '2026-01-21T12:02:40Z'
+  reprezentacja.podpisujacy.podpis_wazny: true
+  reprezentacja.pelnomocnictwo_wymagane: false
+  zamawiajacy.nazwa: Powiat Zawadzki-Zachodni
+  zamawiajacy.adres.ulica: ul. Starostwo 3
+  zamawiajacy.adres.miasto: Zawada Zachodnia
+  zamawiajacy.nip: '9999110402'
+  weryfikacja.numer_ogloszenia: 489891-2025
+  weryfikacja.data_czynnosci: '2026-01-12'
+  weryfikacja.termin_ustawowy: 10 dni (art. 515 ust. 1 pkt 1 lit. a PZP)
+  weryfikacja.termin_wyliczony: '2026-01-22'
+  weryfikacja.wniesione_w_terminie: true
+  weryfikacja.wpis_prawidlowy: false
+  weryfikacja.dowod_przekazania_kopii: true
+  weryfikacja.braki_formalne: true

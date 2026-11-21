@@ -1,0 +1,49 @@
+# case_01_poprawna: Wszystko poprawne
+# DANE FIKCYJNE. Założenie: shift_weekend_holiday=true
+version: 2
+min_similarity: 0.55
+assert:
+  naglowek.sygnatura: null
+  naglowek.braki_formalne: false
+  informacje_ogolne.zamowienie: 'Usługi: Utrzymanie czystości w obiektach użyteczności publicznej na terenie gminy'
+  informacje_ogolne.tryb_postepowania: Przetarg nieograniczony
+  informacje_ogolne.publikator: 'TED powyżej progu UE: 481285-2025'
+  informacje_ogolne.czynnosc: 'Czynność z dnia 2025-12-30: odrzucenie oferty'
+  informacje_ogolne.termin_na_wniesienie: '2026-01-09'
+  informacje_ogolne.wniesione_w_terminie: true
+  informacje_ogolne.wpis.wymagane: 15000.0
+  informacje_ogolne.wpis.wniesione: 15000.0
+  informacje_ogolne.wpis.data_wplaty: '2026-01-08'
+  informacje_ogolne.wpis.prawidlowy: true
+  odwolujacy.konsorcjum: false
+  odwolujacy.nazwa: Trzcinowski Instalacje Spółka z o.o.
+  odwolujacy.forma_prawna: Spółka z ograniczoną odpowiedzialnością
+  odwolujacy.adres.ulica: ul. Lipowa 14/3
+  odwolujacy.adres.kod_pocztowy: 40-101
+  odwolujacy.adres.miasto: Katowice
+  odwolujacy.email: biuro@trzcinowski-instalacje.example
+  odwolujacy.telefon: +48 32 555 01 01
+  odwolujacy.nip: '9997257609'
+  odwolujacy.regon: '990568892'
+  odwolujacy.krs: 0009000100
+  odwolujacy.bae: null
+  odwolujacy.epuap: /trzcinowskiinstalacje/SkrytkaESP
+  reprezentacja.zasady: Do składania oświadczeń woli w imieniu Spółki upoważniony jest każdy Członek Zarządu samodzielnie
+  reprezentacja.organ: ZARZĄD
+  reprezentacja.podpisujacy.imie_nazwisko: Jan Paweł Dąbrowski
+  reprezentacja.podpisujacy.typ_podpisu: niekwalifikowany
+  reprezentacja.podpisujacy.data_podpisu: '2026-01-08T09:14:21Z'
+  reprezentacja.podpisujacy.podpis_wazny: true
+  reprezentacja.pelnomocnictwo_wymagane: false
+  zamawiajacy.nazwa: Gmina Brzozowice Wielkie
+  zamawiajacy.adres.ulica: ul. Rynek 1
+  zamawiajacy.adres.miasto: Brzozowice Wielkie
+  zamawiajacy.nip: '9993816584'
+  weryfikacja.numer_ogloszenia: 481285-2025
+  weryfikacja.data_czynnosci: '2025-12-30'
+  weryfikacja.termin_ustawowy: 10 dni (art. 515 ust. 1 pkt 1 lit. a PZP)
+  weryfikacja.termin_wyliczony: '2026-01-09'
+  weryfikacja.wniesione_w_terminie: true
+  weryfikacja.wpis_prawidlowy: true
+  weryfikacja.dowod_przekazania_kopii: true
+  weryfikacja.braki_formalne: false

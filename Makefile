@@ -2,9 +2,9 @@
 run:
 	docker compose up --build
 test:
-	cd backend && uv run --python 3.11 --extra dev python -m pytest -q
+	cd backend && uv run --python 3.11 --extra dev python -I -X utf8 -m pytest -q
 synth:
-	cd backend && uv run python ../scripts/make_synthetic_cases.py
+	cd backend && uv run --python 3.11 python -I -X utf8 ../scripts/make_synthetic_cases.py
 eval:
 	cd backend && uv run python ../scripts/evaluate_accuracy.py
 demo:

@@ -1,0 +1,49 @@
+# case_03_prokurent_bez_pelnomocnictwa: Podpis prokurenta spoza zarządu, brak pełnomocnictwa
+# DANE FIKCYJNE. Założenie: shift_weekend_holiday=true
+version: 2
+min_similarity: 0.55
+assert:
+  naglowek.sygnatura: null
+  naglowek.braki_formalne: true
+  informacje_ogolne.zamowienie: 'Roboty budowlane: Przebudowa i rozbudowa budynku szkoły podstawowej wraz z infrastrukturą towarzyszącą'
+  informacje_ogolne.tryb_postepowania: Przetarg nieograniczony
+  informacje_ogolne.publikator: 'TED powyżej progu UE: 488742-2025'
+  informacje_ogolne.czynnosc: 'Czynność z dnia 2026-02-03: odrzucenie oferty'
+  informacje_ogolne.termin_na_wniesienie: '2026-02-13'
+  informacje_ogolne.wniesione_w_terminie: true
+  informacje_ogolne.wpis.wymagane: 20000.0
+  informacje_ogolne.wpis.wniesione: 20000.0
+  informacje_ogolne.wpis.data_wplaty: '2026-02-11'
+  informacje_ogolne.wpis.prawidlowy: true
+  odwolujacy.konsorcjum: false
+  odwolujacy.nazwa: Wiśniewska Budownictwo Spółka z o.o.
+  odwolujacy.forma_prawna: Spółka z ograniczoną odpowiedzialnością
+  odwolujacy.adres.ulica: ul. Mokra 12
+  odwolujacy.adres.kod_pocztowy: 00-100
+  odwolujacy.adres.miasto: Warszawa
+  odwolujacy.email: biuro@wisniewska-budownictwo.example
+  odwolujacy.telefon: +48 22 555 03 03
+  odwolujacy.nip: '9997282139'
+  odwolujacy.regon: '991912357'
+  odwolujacy.krs: 0009000122
+  odwolujacy.bae: null
+  odwolujacy.epuap: /wisniewskabudownictwo/SkrytkaESP
+  reprezentacja.zasady: Do składania oświadczeń woli w imieniu Spółki upoważniony jest każdy Członek Zarządu samodzielnie
+  reprezentacja.organ: ZARZĄD
+  reprezentacja.podpisujacy.imie_nazwisko: Marek Zieliński
+  reprezentacja.podpisujacy.typ_podpisu: niekwalifikowany
+  reprezentacja.podpisujacy.data_podpisu: '2026-02-12T14:30:05Z'
+  reprezentacja.podpisujacy.podpis_wazny: true
+  reprezentacja.pelnomocnictwo_wymagane: true
+  zamawiajacy.nazwa: Gmina Kowalewo Dolne
+  zamawiajacy.adres.ulica: ul. Szkolna 2
+  zamawiajacy.adres.miasto: Kowalewo Dolne
+  zamawiajacy.nip: '9995314467'
+  weryfikacja.numer_ogloszenia: 488742-2025
+  weryfikacja.data_czynnosci: '2026-02-03'
+  weryfikacja.termin_ustawowy: 10 dni (art. 515 ust. 1 pkt 1 lit. a PZP)
+  weryfikacja.termin_wyliczony: '2026-02-13'
+  weryfikacja.wniesione_w_terminie: true
+  weryfikacja.wpis_prawidlowy: true
+  weryfikacja.dowod_przekazania_kopii: true
+  weryfikacja.braki_formalne: true

@@ -14,6 +14,6 @@ UI: http://localhost:5173 · API: http://localhost:8000/docs
 
 ## Komendy deweloperskie
 - testy: `make test` (`cd backend && uv run --python 3.11 --extra dev python -m pytest -q`)
-- dane syntetyczne: `make synth` · ewaluacja: `make eval`
+- dane syntetyczne: `make synth` (FIKCYJNE, `data/synthetic/`) · ewaluacja: `make eval`
 
 Kontrakt danych: `backend/app/models/karta.py` (klucze 1:1 z Zał. C OPZ), przykład: `fixtures/karta_example.json`.

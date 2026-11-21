@@ -1,0 +1,49 @@
+# case_04_termin_w_sobote: Termin upływa w sobotę 24.01.2026, odwołanie wniesione w poniedziałek 26.01.2026
+# DANE FIKCYJNE. Założenie: shift_weekend_holiday=true
+version: 2
+min_similarity: 0.55
+assert:
+  naglowek.sygnatura: null
+  naglowek.braki_formalne: false
+  informacje_ogolne.zamowienie: 'Usługi: Świadczenie usług wsparcia technicznego systemów informatycznych urzędu'
+  informacje_ogolne.tryb_postepowania: Przetarg nieograniczony
+  informacje_ogolne.publikator: 'TED powyżej progu UE: 485762-2025'
+  informacje_ogolne.czynnosc: 'Czynność z dnia 2026-01-14: odrzucenie oferty'
+  informacje_ogolne.termin_na_wniesienie: '2026-01-26'
+  informacje_ogolne.wniesione_w_terminie: true
+  informacje_ogolne.wpis.wymagane: 15000.0
+  informacje_ogolne.wpis.wniesione: 15000.0
+  informacje_ogolne.wpis.data_wplaty: '2026-01-23'
+  informacje_ogolne.wpis.prawidlowy: true
+  odwolujacy.konsorcjum: false
+  odwolujacy.nazwa: Żurawski Systemy Spółka z o.o.
+  odwolujacy.forma_prawna: Spółka z ograniczoną odpowiedzialnością
+  odwolujacy.adres.ulica: ul. Fabryczna 21
+  odwolujacy.adres.kod_pocztowy: 90-001
+  odwolujacy.adres.miasto: Łódź
+  odwolujacy.email: biuro@zurawski-systemy.example
+  odwolujacy.telefon: +48 42 555 04 04
+  odwolujacy.nip: '9996748357'
+  odwolujacy.regon: '996021137'
+  odwolujacy.krs: 0009000133
+  odwolujacy.bae: null
+  odwolujacy.epuap: /zurawskisystemy/SkrytkaESP
+  reprezentacja.zasady: Do składania oświadczeń woli w imieniu Spółki upoważniony jest każdy Członek Zarządu samodzielnie
+  reprezentacja.organ: ZARZĄD
+  reprezentacja.podpisujacy.imie_nazwisko: Łukasz Żurawski
+  reprezentacja.podpisujacy.typ_podpisu: niekwalifikowany
+  reprezentacja.podpisujacy.data_podpisu: '2026-01-26T08:41:09Z'
+  reprezentacja.podpisujacy.podpis_wazny: true
+  reprezentacja.pelnomocnictwo_wymagane: false
+  zamawiajacy.nazwa: Urząd Miasta Dębniki Wielkie
+  zamawiajacy.adres.ulica: pl. Wolności 5
+  zamawiajacy.adres.miasto: Dębniki Wielkie
+  zamawiajacy.nip: '9993531545'
+  weryfikacja.numer_ogloszenia: 485762-2025
+  weryfikacja.data_czynnosci: '2026-01-14'
+  weryfikacja.termin_ustawowy: 10 dni (art. 515 ust. 1 pkt 1 lit. a PZP)
+  weryfikacja.termin_wyliczony: '2026-01-26'
+  weryfikacja.wniesione_w_terminie: true
+  weryfikacja.wpis_prawidlowy: true
+  weryfikacja.dowod_przekazania_kopii: true
+  weryfikacja.braki_formalne: false

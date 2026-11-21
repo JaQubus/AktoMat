@@ -1,0 +1,22 @@
+case_id: case_03_prokurent_bez_pelnomocnictwa
+opis: Podpis prokurenta spoza zarządu, brak pełnomocnictwa
+shift_weekend_holiday: true
+kryteria:
+  F1: spełnione
+  F2: spełnione
+  F3: spełnione
+  F4: do_weryfikacji_ręcznej
+  F5: niespełnione
+  F6: niespełnione
+  F7: do_weryfikacji_ręcznej
+  F8: spełnione
+  F9: spełnione
+  F10: spełnione
+  F11: spełnione
+  F12: spełnione
+  F13: nie_dotyczy
+notatki:
+  F4: certyfikat samopodpisany, niekwalifikowany; zaufania nie da się ustalić offline → ręcznie
+  F13: postępowanie wszczęte przed 13.03.2026
+  F7: brak pełnomocnictwa — nie ma czego opłacić
+uwagi: []

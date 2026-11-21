@@ -30,6 +30,13 @@ M1 szkielet+model+fixtures · M2 ingest/text/classify · M3 extract · M4 valida
 
 ## Decyzje
 - (Krok 0) Tekst dokumentów OPZ wyciągnięty do scratchpada przez `uv run --with pymupdf`.
+- (M1) Układ: `backend/{app,pipeline,tests}`, `fixtures/`, `config/`, `scripts/`, `frontend/`. Model Karty: `backend/app/models/karta.py`; rozszerzenia (`dowod`, `weryfikacja.kryteria`, `metadata.rozszerzenia_kontraktu`) pomijane w JSON gdy puste, więc round-trip fixture = 1:1.
+- (M1) Windows Application Control blokuje `.exe` launchery i natywne moduły node (pytest.exe, rollup): używać `python -m pytest`; `vite build` działa tylko w Dockerze. Lokalnie: `node node_modules/typescript/bin/tsc --noEmit`.
+- (Plan) Dane UZP dojdą później. Najpierw dane syntetyczne (`data/synthetic/`, FIKCYJNE, z ground_truth.yaml) + 1 publiczne odwołanie (`data/public/`, ustawa z 2020 r., tylko do testów ekstrakcji, nie reguł F1–F12). Ścieżka danych z `.env` (DATA_DIR), zero założeń o nazwach plików. Po pojawieniu się `data/uzp/`: raport Kroku 0 + porównanie struktury z syntetycznymi + poprawka generatora.
+- (Synth) `scripts/make_synthetic_cases.py` → `data/synthetic/` (5 spraw FIKCYJNYCH; ZIP-y w repo). Wzorce `ground_truth/<id>.yaml` (Zał. D) + `<id>.rules.yaml` (oczekiwane F1–F13, nasze rozszerzenie do testów M5). Wzorzec zakłada `shift_weekend_holiday=true` (sprawa 4: termin sob. 24.01.2026 → pon. 26.01.2026). Wszystkie podpisy: certyfikat samopodpisany, NIEKWALIFIKOWANY → oczekiwane F4 = do_weryfikacji_ręcznej (niepewne ≠ niespełnione; braki_formalne zależy tylko od F2/F5/F6). `QUALIFIED_SIM_CASES` w generatorze symuluje kwalifikowany (QcCompliance). Sprawa 4: neutralne nazwy plików + zagnieżdżony ZIP; sprawa 2: podfolder; sprawa 5: skan przelewu (0 znaków tekstu).
+- (Synth) Mock KRS: `GET /mock/krs/api/krs/OdpisAktualny/{krs}?rejestr=P` z `data/synthetic/krs_mock/`. Kształt JSON jest z pamięci (api-krs.ms.gov.pl było niedostępne z tej maszyny) → zweryfikować z żywym API. KRS fikcyjne: 0009000100+ (poza zakresem istniejących); NIP prefiks 999, REGON prefiks 99 (poprawne sumy kontrolne).
+- (Synth) Python z plikami zawierającymi PL znaki: `python -I -X utf8` (`-I` ignoruje PYTHONUTF8).
+- (Public) `data/public/IQVIA220620odwolanieABM.pdf` (48 str., warstwa tekstowa) pobrany przez PowerShell (curl w bashu nie miał DNS). Katalog poza gitem.
 
 ## Stan danych / ryzyka
 - `./data/uzp` — dane UZP jeszcze nie dostarczone (dojdą później); pracujemy na syntetycznych.
@@ -38,6 +45,5 @@ M1 szkielet+model+fixtures · M2 ingest/text/classify · M3 extract · M4 valida
 - Art. 8 ust. 4 Pzp (przesunięcie terminu z soboty/niedzieli/święta) — źródła UZP sprzeczne; domyślnie flaga `shift_weekend_holiday` w config.
 - Czy są wzorcowe Karty DOC/DOCX do wygenerowania ground_truth? Ile spraw, czy są skany?
 - F13 / e-Doręczenia: skąd brać adres ADE (BAE) w danych testowych?
-- (M1) Układ: `backend/{app,pipeline,tests}`, `fixtures/`, `config/`, `scripts/`, `frontend/`. Model Karty: `backend/app/models/karta.py`; rozszerzenia (`dowod`, `weryfikacja.kryteria`, `metadata.rozszerzenia_kontraktu`) pomijane w JSON gdy puste, więc round-trip fixture = 1:1.
-- (M1) Windows Application Control blokuje `.exe` launchery i natywne moduły node (pytest.exe, rollup): używać `python -m pytest`; `vite build` działa tylko w Dockerze. Lokalnie: `node node_modules/typescript/bin/tsc --noEmit`.
-- (Plan) Dane UZP dojdą później. Najpierw dane syntetyczne (`data/synthetic/`, FIKCYJNE, z ground_truth.yaml) + 1 publiczne odwołanie (`data/public/`, ustawa z 2020 r., tylko do testów ekstrakcji, nie reguł F1–F12). Ścieżka danych z `.env` (DATA_DIR), zero założeń o nazwach plików. Po pojawieniu się `data/uzp/`: raport Kroku 0 + porównanie struktury z syntetycznymi + poprawka generatora.
+- Numer rachunku UZP do wpisu (klasyfikacja przelewów) i dokładna kwota/numer opłaty skarbowej 17 zł — w danych syntetycznych rachunek jest FIKCYJNY; jaki jest prawdziwy numer rachunku UZP?
+- Czy odwołanie podpisane niekwalifikowanym podpisem z nieznanego CA ma być „niespełnione” czy „do weryfikacji ręcznej” (F4)? Przyjęliśmy: do weryfikacji.
