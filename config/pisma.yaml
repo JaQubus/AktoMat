@@ -1,0 +1,50 @@
+# Szablony pism generowanych z kontroli formalnej (GUI: "Kontrola formalna" -> "Projekt pisma").
+# Pismo to projekt dla referenta: poprawia go i podpisuje we własnym systemie.
+#
+# Zmienne w {nawiasach} wypełnia AktoMat danymi sprawy:
+#   {data}                 dzisiejsza data (albo wybrana w kalendarzu), np. 21.11.2026
+#   {miejscowosc}          miejscowość z pola niżej
+#   {sygnatura}            sygnatura nadana przez referenta (pole w GUI)
+#   {odwolujacy}           nazwa odwołującego (Odwolujacy[0].nazwa)
+#   {pelnomocnik}          pełnomocnik odwołującego; pusty, gdy go nie ma
+#   {pelnomocnik_linia}     "za pośrednictwem pełnomocnika: ..." albo pusta linia
+#   {pelnomocnik_kancelaria}
+#   {pelnomocnik_mail}
+#   {zamawiajacy}          nazwa zamawiającego
+#   {numer_postepowania}, {numer_bzp}, {numer_ted}, {tytul_postepowania}
+#   {czynnosc_dzien}       data czynności zamawiającego
+#   {braki}                ponumerowana lista braków z kontroli (bez pozycji pominiętych przez referenta);
+#                          tekst pozycji to `wezwanie` z reguły w config/kontrola.yaml
+#   {termin_uzupelnienia}, {podstawa}  wartości z pól szablonu niżej
+# Wartość, której nie ma w dokumentach, zostaje jako [nawias kwadratowy] do uzupełnienia ręcznie.
+#
+# Formatowanie w .docx: linia "# tekst" = tytuł (pogrubiony, wyśrodkowany), "> tekst" = do prawej,
+# "**tekst**" = pogrubienie, pusta linia = nowy akapit.
+
+miejscowosc: Warszawa
+
+pisma:
+  - id: wezwanie_braki
+    nazwa: Wezwanie do uzupełnienia braków formalnych odwołania
+    # Termin i podstawę prawną ustaw zgodnie z obowiązującymi przepisami - AktoMat ich nie zgaduje.
+    termin_uzupelnienia: "[termin]"
+    podstawa: "[podstawa prawna]"
+    tekst: |
+      > {miejscowosc}, dnia {data}
+
+      Sygn. akt: {sygnatura}
+
+      **{odwolujacy}**
+      {pelnomocnik_linia}
+
+      # WEZWANIE DO UZUPEŁNIENIA BRAKÓW FORMALNYCH ODWOŁANIA
+
+      Dotyczy: odwołania wniesionego w postępowaniu o udzielenie zamówienia publicznego pn. „{tytul_postepowania}”, nr referencyjny {numer_postepowania}, ogłoszenie nr {numer_bzp}, prowadzonym przez zamawiającego {zamawiajacy}.
+
+      Na podstawie {podstawa} wzywam Odwołującego do uzupełnienia braków formalnych odwołania w terminie {termin_uzupelnienia} od dnia doręczenia niniejszego wezwania, poprzez:
+
+      {braki}
+
+      Nieuzupełnienie braków w wyznaczonym terminie skutkuje konsekwencjami przewidzianymi w przepisach.
+
+      > [podpis]
