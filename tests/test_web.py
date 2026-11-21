@@ -22,9 +22,13 @@ def _pdf(text: str) -> bytes:
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, tmp_path):
     monkeypatch.setattr(web, "_engine", Engine(use_llm=False))
     monkeypatch.setattr(web, "_sem", None)
+    monkeypatch.setattr(web, "UPLOADS", tmp_path / "pliki")
+    monkeypatch.setattr(web, "SESSIONS", tmp_path / "zapis")
+    (tmp_path / "pliki").mkdir()
+    (tmp_path / "zapis").mkdir()
     return TestClient(web.app)
 
 
@@ -113,3 +117,33 @@ def test_pisma_i_docx(client):
     d = pydocx.Document(io.BytesIO(r.content))
     assert [p.text for p in d.paragraphs] == ["Warszawa, dnia 1.01.2026", "WEZWANIE", "Firma & Syn\n1) wpisu."]
     assert d.paragraphs[2].runs[0].bold and not d.paragraphs[2].runs[1].bold
+
+
+def test_sesje_zapis_lista_usuniecie(client):
+    up = client.post("/api/extract", files=[("files", ("przelew.pdf", _pdf(PRZELEW), "application/pdf"))]).json()
+    fid = up[0]["id"]
+    assert (web.UPLOADS / fid).is_dir()
+    stan = {"items": [{**up[0], "sprawa": "s1", "edits": {}, "ok": {}}], "skip": {}, "log": [{"akcja": "x"}]}
+    assert client.put("/api/sesje/abcdef12", json={"nazwa": "Test", "referent": "Anna", "stan": stan}).json()["ok"]
+    lista = client.get("/api/sesje").json()
+    assert lista[0]["id"] == "abcdef12" and lista[0]["sprawy"] == ["s1"] and lista[0]["referent"] == "Anna"
+    assert client.get("/api/sesje/abcdef12").json()["stan"]["log"] == [{"akcja": "x"}]
+    assert client.get("/api/sesje/..%2Fx").status_code == 404
+    assert client.put("/api/sesje/ZLE", json={"stan": {}}).status_code == 404
+    assert client.delete("/api/sesje/abcdef12").json()["ok"]
+    assert client.get("/api/sesje").json() == [] and not (web.UPLOADS / fid).exists()
+
+
+def test_zip_bez_danych_osobowych(client):
+    odw = {"Odwolujacy": [{"nazwa": "Belmoria S.A.", "nip": "5260250995",
+                           "pelnomocnik": {"imie_nazwisko": "Aleksandra Marciniak", "mail": "a.m@kancelaria.pl"}}]}
+    prz = {"przelew_bankowy": {"tytul": "Opłata skarbowa, pełnomocnik Aleksandra Marciniak", "kwota": 17.0}}
+    r = client.post("/api/zip", json={"ukryj": True, "pliki": [{"sciezka": "s/odw.json", "json": odw}, {"sciezka": "s/prz.json", "json": prz}],
+                                      "inne": [{"sciezka": "dziennik.csv", "tekst": "zmiana;ALEKSANDRA MARCINIAK;tel. 600 100 200;PESEL 44051401359"}]})
+    zf = zipfile.ZipFile(io.BytesIO(r.content))
+    o = json.loads(zf.read("output/s/odw.json"))
+    assert o["Odwolujacy"][0]["pelnomocnik"] == {"imie_nazwisko": "[UKRYTE]", "mail": "[UKRYTE]"}
+    assert o["Odwolujacy"][0]["nazwa"] == "Belmoria S.A." and o["Odwolujacy"][0]["nip"] == "5260250995"
+    p = json.loads(zf.read("output/s/prz.json"))
+    assert p["przelew_bankowy"] == {"tytul": "Opłata skarbowa, pełnomocnik [UKRYTE]", "kwota": 17.0}
+    assert zf.read("dziennik.csv").decode("utf-8-sig") == "zmiana;[UKRYTE];tel. [UKRYTE];PESEL [UKRYTE]"

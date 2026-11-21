@@ -6,11 +6,12 @@ podgląd dokumentu obok wyodrębnionych danych, poprawki ręczne i eksport ZIP w
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import io
 import json
+import os
 import re
 import shutil
-import tempfile
 import threading
 import uuid
 import zipfile
@@ -23,13 +24,18 @@ from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingRes
 
 from .config import CONFIG_DIR, ROOT
 from .wordfile import DOCX_MIME, build_docx
+from .anonymize import Anonymizer, load_export_config
 from .checks import load_rules, run_checks
 from .locate import locate, page_words
 from .pipeline import Engine
 
 STATIC = Path(__file__).parent / "static"
-UPLOADS = Path(tempfile.gettempdir()) / "odw2json_uploads"
+# Dane pracy referenta (sesje i wczytane PDF-y) poza repozytorium kodu w git: katalog sesje/ jest w .gitignore.
+DATA = Path(os.environ.get("AKTOMAT_DANE") or ROOT / "sesje")
+UPLOADS = DATA / "pliki"
+SESSIONS = DATA / "zapis"
 UPLOADS.mkdir(parents=True, exist_ok=True)
+SESSIONS.mkdir(parents=True, exist_ok=True)
 REPORT = ROOT / "eval_report" / "raport.md"
 MAX_ZIP_FILES = 500
 
@@ -235,10 +241,23 @@ def kontrola_reguly():
     return load_rules()
 
 
+@app.get("/api/eksport")
+def eksport_konfig():
+    """Ustawienia eksportu z config/eksport.yaml (ukrywanie danych osobowych, kolumny rejestru spraw)."""
+    return load_export_config()
+
+
 @app.post("/api/zip")
-def eksport_zip(pliki: list[dict] = Body(..., embed=True), inne: list[dict] | None = Body(None, embed=True)):
+def eksport_zip(pliki: list[dict] = Body(..., embed=True), inne: list[dict] | None = Body(None, embed=True),
+                ukryj: bool = Body(False, embed=True)):
     """ZIP z wynikami: [{"sciezka": "sprawa/plik.json", "json": {...}}] -> output/<sprawa>/<plik>.json.
-    `inne`: dodatkowe pliki tekstowe w katalogu głównym ZIP-a, np. [{"sciezka": "dziennik_zmian.csv", "tekst": "..."}]."""
+    `inne`: dodatkowe pliki tekstowe w katalogu głównym ZIP-a, np. [{"sciezka": "dziennik_zmian.csv", "tekst": "..."}].
+    `ukryj`: ukrywa dane osobowe (config/eksport.yaml) w JSON-ach i w plikach `inne`."""
+    anon = None
+    if ukryj:
+        anon = Anonymizer()
+        for item in pliki:
+            anon.collect(item.get("json"))
     buf = io.BytesIO()
     used = set()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -252,12 +271,17 @@ def eksport_zip(pliki: list[dict] = Body(..., embed=True), inne: list[dict] | No
                 k += 1
             used.add(rel)
             data = item.get("json")
+            if anon and not isinstance(data, str):
+                data = anon.json(data)
             body = data if isinstance(data, str) else json.dumps(data, ensure_ascii=False, indent=2)
             zf.writestr("output/" + rel, body)
         for item in inne or []:
             name = str(_safe_rel(str(item.get("sciezka", "plik.txt"))))
             if name.lower().endswith((".csv", ".txt", ".md")):
-                zf.writestr(name, "\ufeff" + str(item.get("tekst", "")) if name.endswith(".csv") else str(item.get("tekst", "")))
+                txt = str(item.get("tekst", ""))
+                if anon:
+                    txt = anon.text(txt)
+                zf.writestr(name, "\ufeff" + txt if name.endswith(".csv") else txt)
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": 'attachment; filename="wyniki_aktomat.zip"'})
@@ -276,3 +300,68 @@ def docx(tekst: str = Body(..., embed=True), nazwa: str = Body("pismo", embed=Tr
     name = re.sub(r"[^\w\- ]+", "", nazwa).strip() or "pismo"
     return Response(build_docx(tekst), media_type=DOCX_MIME,
                     headers={"Content-Disposition": f'attachment; filename="{name}.docx"'})
+
+
+# ---------- sesje: zapis pracy referenta na serwerze ----------
+
+def _sid(sid: str) -> str:
+    if not re.fullmatch(r"[a-z0-9]{8,40}", sid or ""):
+        raise HTTPException(404)
+    return sid
+
+
+def _session_meta(p: Path) -> dict | None:
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    items = (d.get("stan") or {}).get("items") or []
+    cases = sorted({i.get("sprawa") for i in items if i.get("sprawa")})
+    return {"id": p.stem, "nazwa": d.get("nazwa") or p.stem, "referent": d.get("referent") or "",
+            "zmieniono": d.get("zmieniono"), "sprawy": cases, "dokumenty": len(items)}
+
+
+@app.get("/api/sesje")
+def sesje():
+    """Zapisane sesje, od ostatnio zmienionej."""
+    out = [m for m in (_session_meta(p) for p in SESSIONS.glob("*.json")) if m]
+    return sorted(out, key=lambda m: m.get("zmieniono") or "", reverse=True)
+
+
+@app.get("/api/sesje/{sid}")
+def sesja(sid: str):
+    p = SESSIONS / f"{_sid(sid)}.json"
+    if not p.exists():
+        raise HTTPException(404)
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+@app.put("/api/sesje/{sid}")
+def zapisz_sesje(sid: str, nazwa: str = Body("", embed=True), referent: str = Body("", embed=True),
+                 stan: dict = Body(..., embed=True)):
+    """Zapis stanu pracy (dokumenty, poprawki, zatwierdzenia, pominięcia, dziennik). Zapis atomowy."""
+    p = SESSIONS / f"{_sid(sid)}.json"
+    body = {"nazwa": nazwa[:200], "referent": referent[:200],
+            "zmieniono": dt.datetime.now().astimezone().isoformat(timespec="seconds"), "stan": stan}
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(body, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, p)
+    return {"ok": True, "zmieniono": body["zmieniono"]}
+
+
+@app.delete("/api/sesje/{sid}")
+def usun_sesje(sid: str):
+    """Usuwa sesję i jej wczytane PDF-y."""
+    p = SESSIONS / f"{_sid(sid)}.json"
+    if not p.exists():
+        raise HTTPException(404)
+    try:
+        items = (json.loads(p.read_text(encoding="utf-8")).get("stan") or {}).get("items") or []
+    except ValueError:
+        items = []
+    for it in items:
+        fid = str(it.get("id") or "")
+        if fid.isalnum() and (UPLOADS / fid).is_dir():
+            shutil.rmtree(UPLOADS / fid, ignore_errors=True)
+    p.unlink()
+    return {"ok": True}
