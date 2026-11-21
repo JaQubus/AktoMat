@@ -178,6 +178,15 @@ def _pdf_path(fid: str) -> Path:
     return files[0]
 
 
+@app.delete("/api/pliki/{fid}")
+def usun_plik(fid: str):
+    """Usuwa wczytany PDF (np. po usunięciu sprawy z sesji)."""
+    if not fid.isalnum():
+        raise HTTPException(404)
+    shutil.rmtree(UPLOADS / fid, ignore_errors=True)
+    return {"ok": True}
+
+
 @app.get("/api/pdf/{fid}")
 def pdf(fid: str):
     return FileResponse(_pdf_path(fid), media_type="application/pdf",
@@ -365,3 +374,72 @@ def usun_sesje(sid: str):
             shutil.rmtree(UPLOADS / fid, ignore_errors=True)
     p.unlink()
     return {"ok": True}
+
+
+# ---------- rejestr spraw ze wszystkich zapisanych sesji ----------
+
+def _norm_key(v) -> str:
+    return re.sub(r"[\W_]+", "", str(v or "")).upper()
+
+
+def _first(docs, klasa, path):
+    from .checks import values
+    for d in docs:
+        if d.get("klasa") == klasa and isinstance(d.get("json"), dict):
+            v = values(d["json"], path)
+            if v:
+                return v[0]
+    return None
+
+
+@app.get("/api/rejestr")
+def rejestr():
+    """Wszystkie sprawy ze wszystkich zapisanych sesji: strony, numery, braki (z pominięciami referenta)
+    i powiązania: ta sama sprawa (nr postępowania, ogłoszenie BZP albo TED) w innych sprawach."""
+    rules = load_rules()
+    rows = []
+    for p in SESSIONS.glob("*.json"):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        st = d.get("stan") or {}
+        by_case: dict[str, list] = {}
+        for it in st.get("items") or []:
+            by_case.setdefault(it.get("sprawa") or "bez sprawy", []).append(it)
+        for case, items in by_case.items():
+            docs = [{"plik": i.get("plik"), "klasa": i.get("klasa"), "json": i.get("json")} for i in items if not i.get("blad")]
+            res = run_checks(docs, rules, (st.get("termDays") or {}))
+            skip = (st.get("skip") or {}).get(case) or {}
+            braki = [x["opis"] for kind in ("wymagane", "pola", "zgodnosc") for x in res[kind]
+                     if x["wynik"] in ("brak", "niezgodne") and f"{kind}:{x['id']}" not in skip]
+            term = (res.get("terminy") or [{}])[0]
+            rows.append({
+                "sesja": p.stem, "sesja_nazwa": d.get("nazwa") or p.stem, "referent": d.get("referent") or "",
+                "zmieniono": d.get("zmieniono"), "sprawa": case, "dokumenty": len(items),
+                "klasy": sorted({i.get("klasa") for i in items if i.get("klasa")}),
+                "odwolujacy": _first(docs, "odwolanie", "Odwolujacy[*].nazwa"),
+                "nip": _first(docs, "odwolanie", "Odwolujacy[*].nip"),
+                "zamawiajacy": _first(docs, "odwolanie", "Zamawiajacy[*].nazwa"),
+                "nip_zamawiajacego": _first(docs, "odwolanie", "Zamawiajacy[*].nip"),
+                "numer_postepowania": _first(docs, "odwolanie", "ZamowieniePubliczne.numer_postepowania"),
+                "numer_bzp": _first(docs, "odwolanie", "ZamowieniePubliczne.numer_bzp"),
+                "numer_ted": _first(docs, "odwolanie", "ZamowieniePubliczne.numer_ted"),
+                "czynnosc_dzien": _first(docs, "odwolanie", "OdwolanieKIO.czynnosc_dzien"),
+                "termin": term.get("do"), "braki": braki, "pominiete": len(skip),
+            })
+    keys = ("numer_postepowania", "numer_bzp", "numer_ted")
+    index: dict[tuple, list[int]] = {}
+    for i, r in enumerate(rows):
+        for k in keys:
+            if r.get(k):
+                index.setdefault((k, _norm_key(r[k])), []).append(i)
+    for i, r in enumerate(rows):
+        rel = {}
+        for k in keys:
+            for j in index.get((k, _norm_key(r.get(k))), []) if r.get(k) else []:
+                if j != i:
+                    rel.setdefault(j, set()).add(k)
+        r["powiazane"] = [{"sesja": rows[j]["sesja"], "sprawa": rows[j]["sprawa"], "odwolujacy": rows[j]["odwolujacy"],
+                           "przez": sorted(v)} for j, v in rel.items()]
+    return sorted(rows, key=lambda r: r.get("zmieniono") or "", reverse=True)

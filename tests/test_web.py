@@ -147,3 +147,32 @@ def test_zip_bez_danych_osobowych(client):
     p = json.loads(zf.read("output/s/prz.json"))
     assert p["przelew_bankowy"] == {"tytul": "Opłata skarbowa, pełnomocnik [UKRYTE]", "kwota": 17.0}
     assert zf.read("dziennik.csv").decode("utf-8-sig") == "zmiana;[UKRYTE];tel. [UKRYTE];PESEL [UKRYTE]"
+
+
+def test_rejestr_spraw_i_powiazania(client):
+    from test_checks import ODW, PEL, PRZ
+
+    odw2 = {**ODW, "json": {**ODW["json"], "Odwolujacy": [{"nazwa": "Inny Wykonawca sp. z o.o.", "nip": "1234563218"}],
+                            "ZamowieniePubliczne": {"numer_postepowania": "zs 791 2026", "numer_bzp": "2026/BZP1"}}}
+    s1 = {"items": [{**d, "sprawa": "A"} for d in (ODW, PEL, PRZ)], "skip": {"A": {"wymagane:wpis": {"powod": "ok"}}}}
+    s2 = {"items": [{**odw2, "sprawa": "B"}], "skip": {}}
+    client.put("/api/sesje/sesja0001", json={"nazwa": "S1", "referent": "Anna", "stan": s1})
+    client.put("/api/sesje/sesja0002", json={"nazwa": "S2", "stan": s2})
+    rows = {r["sprawa"]: r for r in client.get("/api/rejestr").json()}
+    a, b = rows["A"], rows["B"]
+    assert a["nip"] == "5260250995" and a["numer_postepowania"] == "ZS.791.2026" and a["termin"] == "2026-03-30"
+    assert a["braki"] == [] and a["pominiete"] == 1          # wpis pominięty przez referenta
+    assert b["braki"] == ["Dowód uiszczenia wpisu od odwołania"]   # bez pełnomocnika, bez przelewu
+    assert a["powiazane"] == [{"sesja": "sesja0002", "sprawa": "B", "odwolujacy": "Inny Wykonawca sp. z o.o.",
+                               "przez": ["numer_postepowania"]}]
+    assert b["powiazane"][0]["sprawa"] == "A"
+
+
+def test_usuniecie_pliku(client):
+    from odw2json import web
+    d = web.UPLOADS / "abc123"
+    d.mkdir(parents=True)
+    (d / "x.pdf").write_bytes(b"%PDF")
+    assert client.delete("/api/pliki/abc123").json() == {"ok": True}
+    assert not d.exists()
+    assert client.delete("/api/pliki/..%2F..").status_code == 404
