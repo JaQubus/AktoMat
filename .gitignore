@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+var/
+node_modules/
+dist/
+data/uzp/
+data/public/
+data/synthetic/*.zip
