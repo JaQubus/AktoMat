@@ -228,10 +228,33 @@ def _signatories_dots(rule, text):
     return Hit(vals, " | ".join(ev)) if vals else None
 
 
+def _signatories_role_below(rule, text):
+    """Skan bez linii kropek (OCR ich nie czyta): osoba, pod którą w 1-2 liniach stoi funkcja (Prezes Zarządu...)."""
+    flags = _flags(rule.get("flags"))
+    end = rx(rule["end"], flags) if rule.get("end") else None
+    lines = [ws(x) for x in text.splitlines()]
+    vals, ev = [], []
+    for i, n in enumerate(lines):
+        if end and end.search(n):
+            break
+        m = re.fullmatch(rf"({PERSON})", n)
+        if not m or re.match(TITLE, n, re.I) or ROLE_WORDS.search(n):
+            continue
+        below = [x for x in lines[i + 1: i + 3] if x and not re.search(r"pieczę|pieczec|podpis", x, re.I)]
+        if below and ROLE_WORDS.search(below[0]) and not re.search(r"\d", below[0]):
+            p = _trim_person(m.group(1))
+            if p and p not in vals:
+                vals.append(p)
+                ev.append(f"{n} / {below[0]}")
+    return Hit(vals, " | ".join(ev)) if vals else None
+
+
 def r_signatories(rule, text):
     flags = _flags(rule.get("flags"))
     if rule.get("mode") == "dots":
         return _signatories_dots(rule, text)
+    if rule.get("mode") == "role_below":
+        return _signatories_role_below(rule, text)
     block = text
     if rule.get("start"):
         ms = list(rx(rule["start"], flags).finditer(text))

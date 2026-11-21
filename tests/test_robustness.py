@@ -126,3 +126,25 @@ def test_vocabulary_restores_city_name():
     text = SCAN.replace("Warszawa, dnia 16 czerwca 2025 r.", "Krakow, dnia 16 czerwca 2025 r.")
     data, trace, _ = extract(_doc(text), BY_NAME["odwolanie"], None)
     assert data["OdwolanieKIO"]["miejscowosc"] == "Kraków"
+
+
+def test_ocr_columns_side_by_side_signatures():
+    from odw2json.textract import columns_to_text
+    lines = [[(10, 20, "Za"), (22, 60, "Alfa"), (500, 510, "Za"), (512, 560, "Alfa")],
+             [(40, 70, "Jan"), (72, 90, "Nowak"), (530, 560, "Anna"), (562, 580, "Kos")],
+             [(50, 80, "Prokurent"), (540, 570, "Prezes")],
+             [(10, 900, "Pełnomocnictwo przyjmuję")]]
+    assert columns_to_text(lines, 1000).splitlines() == [
+        "Za Alfa", "Jan Nowak", "Prokurent", "Za Alfa", "Anna Kos", "Prezes", "Pełnomocnictwo przyjmuję"]
+
+
+def test_clean_ocr_mail_and_ted():
+    from odw2json.textract import clean_ocr
+    assert clean_ocr("biuro Q© kontakt.example") == "biuro@kontakt.example"
+    assert clean_ocr("TED: 2026/5189-999923") == "TED: 2026/S 189-999923"
+
+
+def test_signatories_without_dotted_line():
+    from odw2json.rules import r_signatories
+    hit = r_signatories({"mode": "role_below"}, "postępowaniu.\nEwa Szulc\nmiejsce na pieczęć firmową\nProkurent\n")
+    assert hit.value == ["Ewa Szulc"]

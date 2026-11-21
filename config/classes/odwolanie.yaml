@@ -210,9 +210,9 @@ fields:
     description: Nazwa kancelarii / podmiotu zatrudniającego pełnomocnika.
     rules:
       - {pattern: 'adres\s+do\s+korespondencji\s*:\s*(?P<v>.+?)\s*,\s*(?:ul\.|al\.|pl\.|os\.)', section: odwolujacy, flags: is}
-      - {pattern: '(?P<v>Kancelari\w+[^,\n]*)', section: odwolujacy, flags: ''}
+      - {pattern: '(?P<v>Kancelari\w+(?:(?!\s+[-—–]\s)[^,\n—–])*)', section: odwolujacy, flags: ''}
       # bez bloku "Odwołujący:" - kancelaria w linii zaraz po "reprezentowany przez ..."
-      - {pattern: 'reprezentowan\w*\s+przez[^\n]*\n\s*(?P<v>Kancelari\w+[^,\n]*)', section: naglowek, flags: ''}
+      - {pattern: 'reprezentowan\w*\s+przez[^\n]*\n\s*(?P<v>Kancelari\w+(?:(?!\s+[-—–]\s)[^,\n—–])*)', section: naglowek, flags: ''}
 
   - path: Odwolujacy[*].pelnomocnik.mail
     type: email

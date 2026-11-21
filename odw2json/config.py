@@ -61,6 +61,7 @@ class DocClass:
     list_templates: dict           # "Odwolujacy" -> szablon elementu listy
     source: Path
     lists: dict = field(default_factory=dict)  # podział sekcji na bloki = elementy listy (wiele podmiotów)
+    ocr_layout: str | None = None  # odczyt skanu: None = wierszami, "columns" = kolumny jedna po drugiej
 
     def field(self, path: str) -> FieldSpec | None:
         return next((f for f in self.fields if f.path == path), None)
@@ -118,5 +119,6 @@ def load_classes(classes_dir: Path | None = None) -> list[DocClass]:
             list_templates=_list_templates(tpl),
             source=p,
             lists=raw.get("lists") or {},
+            ocr_layout=raw.get("ocr_layout"),
         ))
     return out

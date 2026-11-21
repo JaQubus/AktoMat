@@ -50,6 +50,9 @@ class Engine:
             tr["czas_s"] = round(time.time() - t0, 2)
             return Result(pdf, None, None, tr)
         cls = self.by_name[cl.name]
+        if cls.ocr_layout and cls.ocr_layout in doc.alt_pages:
+            doc.pages = doc.alt_pages[cls.ocr_layout]
+            tr["ocr_uklad"] = cls.ocr_layout
         llm_json, llm_err, llm_meta = None, None, None
         if self.llm.enabled:
             try:
