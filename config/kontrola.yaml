@@ -1,0 +1,94 @@
+# Kontrola formalna teczki sprawy (pulpit sprawy i ekran "Kontrola formalna" w GUI).
+# Wszystko tutaj jest konfiguracją: nowe wymagane dokumenty, porównania między dokumentami,
+# terminy i walidacje dodaje się w tym pliku, bez zmian w kodzie (silnik: odw2json/checks.py).
+#
+# Ścieżki pól jak w szablonach klas: "Odwolujacy[*].nip" (gwiazdka = wszystkie elementy listy).
+# Wynik kontroli to podpowiedź dla referenta, nie rozstrzygnięcie.
+
+# Dokumenty, które powinny być w teczce.
+#   klasa       - klasa dokumentu z config/classes/
+#   pole/wzorzec- opcjonalnie: dokument liczy się tylko, gdy pole pasuje do wzorca (regex, bez ogonków i wielkości liter)
+#   wyklucz     - regex, który dyskwalifikuje dokument
+#   gdy         - wymóg tylko gdy: {jest: <klasa>} albo {klasa, pole, rowne}
+#   poziom      - brak (brak formalny) | ostrzezenie
+wymagane:
+  - id: odwolanie
+    opis: Odwołanie
+    klasa: odwolanie
+    poziom: brak
+  - id: pelnomocnictwo
+    opis: Pełnomocnictwo dla pełnomocnika wskazanego w odwołaniu
+    klasa: pelnomocnictwo
+    gdy: {klasa: odwolanie, pole: "Odwolujacy[*].przez-pelnomocnika", rowne: 1}
+    poziom: brak
+  - id: wpis
+    opis: Dowód uiszczenia wpisu od odwołania
+    klasa: przelew
+    pole: przelew_bankowy.tytul
+    wzorzec: '\bwpis'
+    wyklucz: 'skarbow'
+    poziom: brak
+  - id: oplata_skarbowa
+    opis: Dowód uiszczenia opłaty skarbowej od pełnomocnictwa
+    klasa: przelew
+    pole: przelew_bankowy.tytul
+    wzorzec: 'skarbow'
+    gdy: {jest: pelnomocnictwo}
+    poziom: ostrzezenie
+
+# Pola, których brak warto zgłosić referentowi.
+pola:
+  - {klasa: odwolanie, pole: OdwolanieKIO.data, opis: Data sporządzenia odwołania, poziom: ostrzezenie}
+  - {klasa: odwolanie, pole: OdwolanieKIO.czynnosc_dzien, opis: Data czynności zamawiającego, poziom: ostrzezenie}
+  - {klasa: odwolanie, pole: "Odwolujacy[*].nazwa", opis: Nazwa odwołującego, poziom: brak}
+  - {klasa: odwolanie, pole: "Zamawiajacy[*].nazwa", opis: Nazwa zamawiającego, poziom: brak}
+
+# Zgodność między dokumentami.
+#   tryb: zawiera_sie - każda wartość z "a" występuje wśród wartości "b" (np. pełnomocnik ma pełnomocnictwo)
+#         rowne       - któraś wartość "a" odpowiada którejś wartości "b"
+#         w_tekscie   - wartość "a" występuje w tekście pola "b" (np. nr postępowania w tytule przelewu)
+#   podobienstwo: próg dopasowania nazw 0-100 (literówki, OCR)
+zgodnosc:
+  - id: pelnomocnik
+    opis: Pełnomocnik z odwołania ma pełnomocnictwo
+    a: {klasa: odwolanie, pole: "Odwolujacy[*].pelnomocnik.imie_nazwisko"}
+    b: {klasa: pelnomocnictwo, pole: "pelnomocnicy[*].imie_nazwisko"}
+    tryb: zawiera_sie
+  - id: mocodawca
+    opis: Mocodawca w pełnomocnictwie to odwołujący
+    a: {klasa: odwolanie, pole: "Odwolujacy[*].nazwa"}
+    b: {klasa: pelnomocnictwo, pole: "mocodawca[*].data.nazwa"}
+    tryb: rowne
+  - id: nip_mocodawcy
+    opis: NIP mocodawcy zgodny z NIP odwołującego
+    a: {klasa: odwolanie, pole: "Odwolujacy[*].nip"}
+    b: {klasa: pelnomocnictwo, pole: "mocodawca[*].data.nip"}
+    tryb: rowne
+    podobienstwo: 100
+  - id: postepowanie_w_przelewie
+    opis: Nr postępowania z odwołania w tytule przelewu
+    a: {klasa: odwolanie, pole: ZamowieniePubliczne.numer_postepowania}
+    b: {klasa: przelew, pole: przelew_bankowy.tytul}
+    tryb: w_tekscie
+
+# Terminy liczone od daty z dokumentu. Ostatni dzień wypadający w sobotę, niedzielę albo święto
+# przesuwa się na najbliższy dzień roboczy. Liczbę dni ustaw zgodnie z przepisami dla danego trybu.
+terminy:
+  - id: odwolanie
+    opis: Ostatni dzień na wniesienie odwołania
+    klasa: odwolanie
+    pole: OdwolanieKIO.czynnosc_dzien
+    dni: 10
+    warianty: [10, 5]
+swieta:
+  stale: ["01-01", "01-06", "05-01", "05-03", "08-15", "11-01", "11-11", "12-24", "12-25", "12-26"]
+  ruchome: [wielkanoc, poniedzialek_wielkanocny, zeslanie_ducha, boze_cialo]
+
+# Walidacja wartości po nazwie pola (ostatni człon ścieżki).
+walidacja:
+  nip: nip
+  regon: regon
+  krs: krs
+  pesel: pesel
+  na_rachunek: nrb
+  z_rachunku: nrb

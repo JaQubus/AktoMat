@@ -83,3 +83,19 @@ def test_szukaj_na_drugiej_stronie(client, tmp_path):
     res = client.post("/api/extract", files={"files": ("x.pdf", doc.tobytes(), "application/pdf")}).json()[0]
     hit = client.get(f"/api/szukaj/{res['id']}", params={"q": ["2026/BZP00123456"], "strona": 1}).json()
     assert hit["strona"] == 2 and hit["prostokaty"] and hit["prostokaty"][0][1] > 0.7
+
+
+def test_api_kontrola_i_zip_z_dziennikiem(client):
+    from test_checks import ODW, PRZ
+
+    r = client.post("/api/kontrola", json={"dokumenty": [ODW, PRZ], "dni": {"odwolanie": 5}})
+    assert r.status_code == 200
+    body = r.json()
+    assert {x["id"]: x["wynik"] for x in body["wymagane"]}["wpis"] == "brak"
+    assert body["terminy"][0]["do"] == "2026-03-25"
+    assert "wymagane" in client.get("/api/kontrola/reguly").json()
+    z = client.post("/api/zip", json={"pliki": [{"sciezka": "s1/a.json", "json": {}}],
+                                      "inne": [{"sciezka": "dziennik_zmian.csv", "tekst": "a;b"},
+                                               {"sciezka": "../x.exe", "tekst": "no"}]})
+    names = zipfile.ZipFile(io.BytesIO(z.content)).namelist()
+    assert names == ["output/s1/a.json", "dziennik_zmian.csv"]
