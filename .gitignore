@@ -3,8 +3,9 @@
 __pycache__/
 *.pyc
 .pytest_cache/
-var/
-node_modules/
-dist/
-data/uzp/
-data/public/
+output/*
+!output/.gitkeep
+input/*
+!input/.gitkeep
+trace/
+eval_report/

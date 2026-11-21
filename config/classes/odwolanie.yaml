@@ -1,0 +1,270 @@
+# Klasa dokumentu: ODWOŁANIE do Prezesa Krajowej Izby Odwoławczej.
+# Plik w całości opisuje klasę: jak ją rozpoznać, jaki JSON zwrócić, jak wyciągnąć każde pole.
+# Nazwa klasy = nazwa wzorcowego pliku JSON w danych UZP (odwolanie.json).
+
+name: odwolanie
+description: Odwołanie wykonawcy do Prezesa Krajowej Izby Odwoławczej (KIO) od czynności zamawiającego
+enabled: true
+
+# --- Klasyfikacja: suma wag trafionych wzorców (bez wielkości liter i polskich znaków) ---
+classify:
+  min_score: 5
+  filename_hints: [odwolan, odwołan]
+  filename_weight: 1
+  keywords:
+    - {pattern: '\bodwolanie\b|o d w o l a n i e', weight: 3}
+    - {pattern: 'odwolujac', weight: 3}
+    - {pattern: 'krajow\w* izb\w* odwolawcz', weight: 2}
+    - {pattern: 'zamawiajac', weight: 1}
+    - {pattern: 'zarzut|zarzuca', weight: 1}
+    - {pattern: 'wnosze o|wnosi o|wnoszę odwołanie', weight: 1}
+    - {pattern: 'art\. 513|art\. 505|art\. 515', weight: 2}
+  negative:
+    - {pattern: 'udzielam pelnomocnictwa|niniejszym udzielam|ustanawiam pelnomocnik', weight: 4}
+    - {pattern: 'potwierdzenie (wykonania )?(przelewu|operacji)|rachunek (nadawcy|odbiorcy|zleceniodawcy)', weight: 4}
+    - {pattern: 'see the notice on ted website|ogloszenie o zamowieniu.{0,40}tryb standardowy', weight: 6}
+
+# --- Wzorzec wyniku (struktura 1:1 z oczekiwane-json/odwolanie.json) ---
+output_template:
+  OdwolanieKIO:
+    data: null
+    czynnosc_dzien: null
+    czynnosc_powod_id: null
+    czynnosc_opis: null
+    miejscowosc: null
+  Odwolujacy:
+    - krs: null
+      nazwa: null
+      nip: null
+      regon: null
+      przez-pelnomocnika: null
+      pelnomocnik:
+        imie_nazwisko: null
+        nazwa: null
+        mail: null
+  Zamawiajacy:
+    - krs: null
+      nazwa: null
+      nip: null
+      regon: null
+      prowadzacy_postepowanie: null
+  ZamowieniePubliczne:
+    numer_bzp: null
+    numer_postepowania: null
+    numer_ted: null
+    tytul: null
+
+# --- Słowniki ---
+enums:
+  powody:
+    1: Decyzja o odrzuceniu oferty
+    2: Ogłoszenie wyboru oferty
+    3: Decyzja o wykluczeniu wykonawcy
+    4: Publikacja specyfikacji warunków zamówienia (SWZ)
+    5: Modyfikacja treści SWZ
+    6: Odpowiedzi i wyjaśnienia do SWZ
+    7: Zaniechanie odrzucenia oferty
+    8: Zaniechanie wykluczenia wykonawcy
+    9: Decyzja o unieważnieniu postępowania
+    10: Zaniechanie unieważnienia postępowania
+    11: Opis przedmiotu zamówienia (OPZ)
+    12: Inna czynność lub zaniechanie zamawiającego   # brak w danych treningowych - etykieta robocza
+
+# --- Sekcje dokumentu (zakres tekstu dla reguł) ---
+sections:
+  naglowek: {start: '\A', end: 'ODWOŁANIE|O D W O Ł A N I E|Działając', flags: '', max_chars: 4000}
+  odwolujacy:
+    start: '(?m)^\s*(?:\d\)\s*)?Odwołując\w*[^\n:]{0,80}:'
+    end: '(?m)^\s*(?:\d\)\s*)?(?:Zamawiając\w*[^\n:]{0,80}:|ODWOŁANIE|O D W O|[Dd]otyczy|Działając|Wykonawca wybrany|Uczestnik)'
+    flags: ''
+    max_chars: 1500
+  zamawiajacy:
+    start: '(?m)^\s*(?:\d\)\s*)?Zamawiając\w*[^\n:]{0,140}(?:\n[^\n:]{0,80})?:'
+    end: '(?m)^\s*(?:Odwołując\w*[^\n:]{0,80}:|ODWOŁANIE|O D W O|[Dd]otyczy|Działając|Wykonawca wybrany|Uczestnik|Wartość zamówienia|Nr ogłoszenia)'
+    flags: ''
+    max_chars: 1500
+  dotyczy: {start: '[Dd]otyczy|DOTYCZY', end: 'Działając|Zarzut|ODWOŁANIE\s*\n\s*Działając', flags: '', max_chars: 2500}
+
+# --- Listy wielu podmiotów: sekcja dzielona na bloki, każdy blok = jeden element listy ---
+lists:
+  Zamawiajacy: {section: zamawiajacy, split: '^\s*\d\)\s*', require: 'KRS|NIP|REGON|ul\.'}
+
+# --- Instrukcje dla modelu językowego (dokładane do promptu) ---
+llm_instructions: |
+  - OdwolanieKIO.data i miejscowosc bierz WYŁĄCZNIE z nagłówka pisma (linia typu "Miasto, dnia 9 listopada 2026 r." albo "Miasto, 28.08.2026"). Jeśli pismo nie ma takiej linii - null (nie bierz daty z treści).
+  - czynnosc_powod_id ustal WYŁĄCZNIE na podstawie pierwszej zaskarżonej czynności/zaniechania zamawiającego (zwykle zdanie "Zamawiający w dniu ... [czynność]" albo pierwszy zarzut). Wybierz id ze słownika powody. Rozróżniaj czynność od zaniechania: "nie odrzucił / zaniechał odrzucenia" = 7, "odrzucił" = 1; "nie wykluczył / zaniechał wykluczenia" = 8, "wykluczył" = 3; "zaniechał unieważnienia" = 10, "unieważnił" = 9; wybór najkorzystniejszej oferty = 2; publikacja SWZ / ogłoszenia z SWZ = 4; zmiana/modyfikacja SWZ = 5; odpowiedzi/wyjaśnienia treści SWZ = 6; postanowienia Opisu Przedmiotu Zamówienia = 11. Wezwania zamawiającego do wyjaśnień (wcześniejsze zdarzenia) NIE są zaskarżoną czynnością.
+  - czynnosc_dzien to data tej czynności (RRRR-MM-DD); jeśli brak wiarygodnej daty - null.
+  - Odwolujacy: wykonawca wnoszący odwołanie. Przy konsorcjum podaj tylko Lidera konsorcjum (jeden element listy). przez-pelnomocnika = 1 jeśli odwołującego reprezentuje pełnomocnik (adwokat, radca prawny, inna osoba), inaczej 0.
+  - pelnomocnik.imie_nazwisko: tylko PIERWSZY wymieniony pełnomocnik, bez tytułów (adw., r. pr.), w mianowniku. pelnomocnik.nazwa: nazwa kancelarii/podmiotu zatrudniającego pełnomocnika (np. z "adres do korespondencji"). pelnomocnik.mail: e-mail kontaktowy podany przy odwołującym/pełnomocniku.
+  - Zamawiajacy: wszyscy zamawiający wymienieni jako strona (jeden element na podmiot). prowadzacy_postepowanie: null gdy jest jeden zamawiający; przy wielu: 1 dla oznaczonego jako lider/prowadzący postępowanie, 0 dla pozostałych. Nie wpisuj tu wykonawców wybranych ani uczestników.
+  - numer_bzp w formacie "RRRR/BZP########" (bez spacji). numer_ted w formacie "NNNNNN-RRRR" (np. "2026/S 067-999583" zapisz jako "999583-2026"). Nie myl numeru BZP z TED.
+  - numer_postepowania: numer referencyjny / znak sprawy nadany przez zamawiającego (np. "ZP.271/130/2026").
+  - tytul: nazwa zamówienia (zwykle w cudzysłowie po "pn."), bez cudzysłowów, jedną linią.
+
+# --- Pola: typ (normalizacja i walidacja), opis (do promptu) i reguły deterministyczne ---
+fields:
+  - path: OdwolanieKIO.data
+    type: date
+    description: Data pisma z nagłówka pierwszej strony.
+    rules:
+      - pattern: '(?m)^\s*[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:[ -][A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż]+){0,2}(?:\s*,\s*(?:dnia\s+|dn\.\s*)?|\s+dnia\s+)(?P<v>\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4}|\d{4}-\d{2}-\d{2})'
+        flags: m
+        max_chars: 5000
+
+  - path: OdwolanieKIO.miejscowosc
+    type: string
+    description: Miejscowość z nagłówka pierwszej strony (np. "Pruszków").
+    rules:
+      - pattern: '(?m)^\s*(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:[ -][A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż]+){0,2}?)(?:\s*,\s*(?:dnia\s+|dn\.\s*)?|\s+dnia\s+)(?:\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4}|\d{4}-\d{2}-\d{2})'
+        flags: m
+        max_chars: 5000
+
+  - path: OdwolanieKIO.czynnosc_powod_id
+    type: enum
+    prefer: llm
+    description: Id powodu odwołania 1-12 ze słownika powody, wyłącznie na podstawie pierwszej zaskarżonej czynności.
+    rules:
+      - &czynnosc
+        kind: sentence_map
+        anchor: 'Zamawiający\s+w\s+dniu\s+(?P<v>\d{1,2}(?:\.\d{1,2}\.|\s+[a-ząćęłńóśźż]+\s+)\d{4})'
+        skip: 'wezwał|wzywał|wezwania'
+        window: 450
+        flags: i
+        map:
+          - {pattern: 'zaniecha\w*\s+unieważni|nie\s+unieważni', value: 10}
+          - {pattern: 'unieważni', value: 9}
+          - {pattern: 'zaniecha\w*\s+wyklucz|nie\s+wykluczy', value: 8}
+          - {pattern: 'wyklucz', value: 3}
+          - {pattern: 'zaniecha\w*\s+odrzuc|nie\s+odrzuci', value: 7}
+          - {pattern: 'odrzuc|odrzuci', value: 1}
+          - {pattern: 'zmodyfikow|modyfikac|zmieni\w*\s+treść|zmian\w*\s+treści', value: 5}
+          - {pattern: 'odpowiedzi|wyjaśnie\w*\s+treści|wyjaśnień\s+treści', value: 6}
+          - {pattern: 'opis\w*\s+przedmiotu\s+zamówienia|\bOPZ\b', value: 11}
+          - {pattern: 'specyfikac|\bSWZ\b|ogłoszeni\w*\s+o\s+zamówieniu', value: 4}
+          - {pattern: 'wyb[oó]r\w*|wybra\w+|wyniku\s+postępowania', value: 2}
+
+  - path: OdwolanieKIO.czynnosc_dzien
+    type: date
+    description: Data zaskarżonej czynności (pierwszy zarzut).
+    rules:
+      - <<: *czynnosc
+        return: match
+
+  - path: OdwolanieKIO.czynnosc_opis
+    type: string
+    description: Kanoniczny opis czynności ze słownika powody (wyliczany z czynnosc_powod_id).
+    derive: {kind: enum_label, from: OdwolanieKIO.czynnosc_powod_id, enum: powody}
+
+  - path: Odwolujacy[*].nazwa
+    type: name
+    description: Pełna nazwa odwołującego (lub lidera konsorcjum).
+    rules:
+      - {kind: entity_name, section: odwolujacy, after: 'Lider\w*(?:\s+Konsorcjum)?\s*:'}
+      - {kind: entity_name, section: odwolujacy, skip: 'konsorcj|lider|^\d\)\s*$'}
+
+  - path: Odwolujacy[*].krs
+    type: krs
+    description: KRS odwołującego (10 cyfr) albo null.
+    rules:
+      - {pattern: 'KRS\s*(?:nr\s*)?:?\s*(?P<v>\d{10})', section: odwolujacy}
+
+  - path: Odwolujacy[*].nip
+    type: nip
+    description: NIP odwołującego (10 cyfr) albo null.
+    rules:
+      - {pattern: 'NIP\s*:?\s*(?P<v>\d{3}[- ]?\d{2,3}[- ]?\d{2,3}[- ]?\d{2,3})', section: odwolujacy}
+
+  - path: Odwolujacy[*].regon
+    type: regon
+    description: REGON odwołującego (9 lub 14 cyfr) albo null.
+    rules:
+      - {pattern: 'REGON\s*:?\s*(?P<v>\d{9}(?:\d{5})?)', section: odwolujacy}
+
+  - path: Odwolujacy[*].przez-pelnomocnika
+    type: flag
+    description: 1 jeśli odwołujący działa przez pełnomocnika, 0 jeśli nie.
+    derive: {kind: notnull_flag, from: 'Odwolujacy[*].pelnomocnik.imie_nazwisko'}
+
+  - path: Odwolujacy[*].pelnomocnik.imie_nazwisko
+    type: person
+    description: Imię i nazwisko pierwszego pełnomocnika odwołującego, bez tytułu zawodowego.
+    rules:
+      - {kind: titled_persons, section: odwolujacy, all: false}
+      - {pattern: 'reprezentowan\w*\s+przez\s*:?\s*(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)', section: odwolujacy, flags: ''}
+
+  - path: Odwolujacy[*].pelnomocnik.nazwa
+    type: name
+    description: Nazwa kancelarii / podmiotu zatrudniającego pełnomocnika.
+    rules:
+      - {pattern: 'adres\s+do\s+korespondencji\s*:\s*(?P<v>.+?)\s*,\s*(?:ul\.|al\.|pl\.|os\.)', section: odwolujacy, flags: is}
+      - {pattern: '(?P<v>Kancelari\w+[^,\n]*)', section: odwolujacy, flags: ''}
+
+  - path: Odwolujacy[*].pelnomocnik.mail
+    type: email
+    description: Adres e-mail pełnomocnika / do korespondencji.
+    rules:
+      - {pattern: '(?P<v>[\w.+-]+@[\w-]+(?:\.[\w-]+)+)', section: odwolujacy}
+
+  - path: Zamawiajacy[*].nazwa
+    type: name
+    description: Pełna nazwa zamawiającego.
+    rules:
+      - {kind: entity_name, section: zamawiajacy, skip: 'zamawiając|lider|partner|^\d\)\s*$'}
+
+  - path: Zamawiajacy[*].krs
+    type: krs
+    description: KRS zamawiającego, jeśli jawnie podany.
+    rules:
+      - {pattern: 'KRS\s*(?:nr\s*)?:?\s*(?P<v>\d{10})', section: zamawiajacy}
+
+  - path: Zamawiajacy[*].nip
+    type: nip
+    description: NIP zamawiającego, jeśli jawnie podany.
+    rules:
+      - {pattern: 'NIP\s*:?\s*(?P<v>\d{3}[- ]?\d{2,3}[- ]?\d{2,3}[- ]?\d{2,3})', section: zamawiajacy}
+
+  - path: Zamawiajacy[*].regon
+    type: regon
+    description: REGON zamawiającego, jeśli jawnie podany.
+    rules:
+      - {pattern: 'REGON\s*:?\s*(?P<v>\d{9}(?:\d{5})?)', section: zamawiajacy}
+
+  - path: Zamawiajacy[*].prowadzacy_postepowanie
+    type: flag
+    require_grounding: false
+    rules:   # tylko gdy zamawiających jest kilku (bloki)
+      - {pattern: 'lider|prowadząc\w*\s+postępowanie|pełnomocnik\w*\s+zamawiając', value: 1, section: '@multi'}
+      - {kind: const, value: 0, section: '@multi'}
+    description: null gdy jeden zamawiający; przy wielu 1 = lider/prowadzący postępowanie, 0 = pozostali.
+
+  - path: ZamowieniePubliczne.numer_bzp
+    type: bzp
+    description: Numer ogłoszenia w BZP, format RRRR/BZP######## (bez spacji).
+    rules:
+      - pattern: '(?P<v>\d{4}\s*/\s*BZP\s*\d{8}(?:\s*/\s*\d{2})?)'
+        max_chars: 6000
+
+  - path: ZamowieniePubliczne.numer_postepowania
+    type: refno
+    description: Numer referencyjny / znak postępowania nadany przez zamawiającego.
+    rules:
+      - pattern: '(?:nr\.?\s+referencyjn\w*(?:\s+sprawy)?|numer\s+referencyjn\w*(?:\s+sprawy)?|znak\s+(?:sprawy|postępowania)|nr\s+sprawy|numer\s+sprawy|numer\s+postępowania|nr\s+postępowania|postępowani\w+\s+nr)\s*:?\s*(?P<v>[A-Za-z0-9][A-Za-z0-9./\-_]*[A-Za-z0-9])'
+        flags: i
+
+  - path: ZamowieniePubliczne.numer_ted
+    type: ted
+    description: Numer ogłoszenia TED w formacie NNNNNN-RRRR.
+    rules:
+      - pattern: '(?P<v>\d{4}\s*/\s*S\s*\d{1,3}\s*-\s*\d{5,7})'
+        max_chars: 5000
+      - pattern: '(?:TED|Dzienniku\s+Urzędowym|Dz\.\s*Urz\.|OJ\s+S)[\s\S]{0,100}?(?P<v>\b\d{5,7}\s*-\s*\d{4}\b)'
+        flags: i
+        max_chars: 5000
+
+  - path: ZamowieniePubliczne.tytul
+    type: text
+    description: Tytuł (nazwa) zamówienia.
+    rules:
+      - {pattern: '\bpn\.?\s*:?\s*[„"](?P<v>[^”"]{5,400})[”"]', flags: s}
+      - {pattern: 'pod\s+nazwą\s*:?\s*[„"](?P<v>[^”"]{5,400})[”"]', flags: is}
+      - {pattern: 'przedmiotem\s+(?:jest|zamówienia\s+jest)\s*:?\s*[„"](?P<v>[^”"]{5,400})[”"]', flags: is}

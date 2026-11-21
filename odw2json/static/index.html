@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Odwołania2JSON</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #6a7385; --line: #e2e5eb;
+    --accent: #1f5fbf; --accent-soft: #e8f0fc;
+    --llm: #6b3fbf; --llm-soft: #f0eafb; --rules: #1d7a4d; --rules-soft: #e6f4ec;
+    --derived: #8a6a12; --derived-soft: #faf3df; --none: #9aa1ad; --warn: #b4472c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1a1f27; --ink: #e5e9f0; --muted: #98a2b3; --line: #2a313c;
+      --accent: #6aa0ff; --accent-soft: #1d2a40; --llm: #b597ff; --llm-soft: #2a2140;
+      --rules: #5fcf98; --rules-soft: #18302a; --derived: #e2c060; --derived-soft: #332b14; --none: #6b7280; --warn: #ff8a6b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
+  header .status { color: var(--muted); font-size: 12px; }
+  header .spacer { flex: 1; }
+  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  main { flex: 1; display: grid; grid-template-columns: 240px 1fr 1fr; min-height: 0; }
+  aside { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  #drop { margin: 12px; padding: 18px 12px; border: 2px dashed var(--line); border-radius: 8px; text-align: center; color: var(--muted); cursor: pointer; }
+  #drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  #files { list-style: none; margin: 0; padding: 0 8px 12px; overflow: auto; flex: 1; }
+  #files li { padding: 8px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; }
+  #files li.active { background: var(--accent-soft); }
+  #files li .name { word-break: break-all; }
+  #files li .cls { font-size: 12px; color: var(--muted); }
+  .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
+  .pane-head { padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; background: var(--panel); font-weight: 600; }
+  .pane-head .tabs { margin-left: auto; display: flex; gap: 4px; font-weight: 400; }
+  .tab { padding: 3px 10px; border-radius: 5px; cursor: pointer; color: var(--muted); }
+  .tab.on { background: var(--accent-soft); color: var(--ink); }
+  iframe { flex: 1; border: 0; width: 100%; background: #888; }
+  .empty { margin: auto; color: var(--muted); text-align: center; padding: 24px; }
+  #result { flex: 1; overflow: auto; padding: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.path { color: var(--muted); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; width: 40%; word-break: break-all; }
+  td.val { font-weight: 500; word-break: break-word; }
+  td.val.null { color: var(--none); font-weight: 400; font-style: italic; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--accent-soft); }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 500; white-space: nowrap; }
+  .b-LLM { color: var(--llm); background: var(--llm-soft); }
+  .b-reguły { color: var(--rules); background: var(--rules-soft); }
+  .b-wyliczone { color: var(--derived); background: var(--derived-soft); }
+  .b-brak { color: var(--none); border: 1px solid var(--line); }
+  .ev { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .ev mark { background: var(--accent-soft); color: var(--ink); }
+  .note { font-size: 12px; color: var(--warn); }
+  pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
+  .meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: s 0.8s linear infinite; display: inline-block; vertical-align: -2px; }
+  @keyframes s { to { transform: rotate(360deg); } }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } .pane { min-height: 60vh; } aside { max-height: 40vh; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Odwołania2JSON</h1>
+  <span class="status" id="status">łączenie…</span>
+  <span class="spacer"></span>
+  <button class="btn" id="download" disabled>Pobierz JSON</button>
+</header>
+<main>
+  <aside>
+    <div id="drop">Upuść pliki PDF<br>albo kliknij, aby wybrać<input type="file" id="pick" accept="application/pdf" multiple hidden></div>
+    <ul id="files"></ul>
+  </aside>
+  <section class="pane">
+    <div class="pane-head">Dokument źródłowy</div>
+    <div class="empty" id="pdfEmpty">Wgraj PDF, aby zobaczyć podgląd.</div>
+    <iframe id="pdf" hidden title="Podgląd PDF"></iframe>
+  </section>
+  <section class="pane">
+    <div class="pane-head">Wyodrębnione dane
+      <div class="tabs"><span class="tab on" data-v="fields">Pola i źródła</span><span class="tab" data-v="json">JSON</span><span class="tab" data-v="trace">Ślad</span></div>
+    </div>
+    <div id="result"><div class="empty">Brak wyników.</div></div>
+  </section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const items = [];
+let current = null, view = "fields";
+
+fetch("/api/status").then(r => r.json()).then(s => {
+  $("#status").textContent = (s.llm ? `LLM: ${s.model}` : "LLM wyłączony (tylko reguły)") +
+    " · klasy: " + s.klasy.map(k => k.nazwa).join(", ");
+}).catch(() => $("#status").textContent = "brak połączenia z serwerem");
+
+const drop = $("#drop"), pick = $("#pick");
+drop.onclick = () => pick.click();
+pick.onchange = () => upload([...pick.files]);
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); upload([...e.dataTransfer.files]); };
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
+  view = t.dataset.v; render();
+});
+
+async function upload(files) {
+  for (const f of files.filter(f => f.name.toLowerCase().endsWith(".pdf"))) {
+    const it = { plik: f.name, pending: true, localUrl: URL.createObjectURL(f) };
+    items.push(it); drawList(); if (!current) select(it);
+    const fd = new FormData(); fd.append("files", f);
+    try {
+      const [res] = await (await fetch("/api/extract", { method: "POST", body: fd })).json();
+      Object.assign(it, res, { pending: false });
+    } catch (e) { Object.assign(it, { pending: false, blad: String(e) }); }
+    drawList(); if (current === it) select(it);
+  }
+}
+
+function drawList() {
+  const ul = $("#files"); ul.innerHTML = "";
+  items.forEach(it => {
+    const li = document.createElement("li");
+    li.className = it === current ? "active" : "";
+    const cls = it.pending ? '<span class="spinner"></span> analiza…' :
+      it.blad ? `<span class="note">błąd</span>` : (it.klasa || "nierozpoznany typ — brak JSON");
+    li.innerHTML = `<div class="name">${esc(it.plik)}</div><div class="cls">${cls}</div>`;
+    li.onclick = () => select(it);
+    ul.appendChild(li);
+  });
+}
+
+function select(it) {
+  current = it; drawList();
+  const fr = $("#pdf"); fr.hidden = false; $("#pdfEmpty").hidden = true;
+  const src = it.localUrl || `/api/pdf/${it.id}`;
+  if (fr.dataset.src !== src) { fr.src = src; fr.dataset.src = src; }
+  $("#download").disabled = !it.json;
+  render();
+}
+
+function goPage(n) {
+  if (!current || !n) return;
+  const base = current.localUrl || `/api/pdf/${current.id}`;
+  $("#pdf").src = `${base}#page=${n}`; $("#pdf").dataset.src = $("#pdf").src;
+}
+
+function render() {
+  const box = $("#result"), it = current;
+  if (!it) { box.innerHTML = '<div class="empty">Brak wyników.</div>'; return; }
+  if (it.pending) { box.innerHTML = '<div class="empty"><span class="spinner"></span> Trwa analiza dokumentu…</div>'; return; }
+  if (it.blad) { box.innerHTML = `<div class="empty note">${esc(it.blad)}</div>`; return; }
+  const t = it.slad || {};
+  const meta = `<div class="meta">Klasa: <b>${esc(it.klasa || "nierozpoznana")}</b> · stron: ${t.strony ?? "?"}` +
+    (t.ocr_strony && t.ocr_strony.length ? ` · OCR: str. ${t.ocr_strony.join(", ")}` : "") +
+    ` · LLM: ${t.llm_uzyty ? "tak" : "nie"}` + (t.llm_blad ? ` <span class="note">(${esc(t.llm_blad)})</span>` : "") +
+    ` · ${t.czas_s ?? "?"} s</div>`;
+  if (!it.json) {
+    box.innerHTML = meta + `<div class="empty">Dokument nie pasuje do żadnej skonfigurowanej klasy, więc JSON nie jest generowany.<br><br>Punktacja: ${esc(JSON.stringify(t.klasyfikacja?.punkty || {}))}</div>`;
+    return;
+  }
+  if (view === "json") { box.innerHTML = meta + `<pre>${esc(JSON.stringify(it.json, null, 2))}</pre>`; return; }
+  if (view === "trace") { box.innerHTML = meta + `<pre>${esc(JSON.stringify(t, null, 2))}</pre>`; return; }
+  const rows = Object.entries(t.pola || {}).map(([path, f]) => {
+    const v = f.wartosc, isNull = v === null || v === undefined;
+    const src = f.zrodlo || "brak";
+    const ev = f.cytat ? `<div class="ev">${f.strona ? `str. ${f.strona}: ` : ""}„${highlight(f.cytat, v)}”</div>` : "";
+    const notes = (f.uwagi || []).map(n => `<div class="note">${esc(n)}</div>`).join("");
+    return `<tr class="row" data-page="${f.strona || ""}"><td class="path">${esc(path)}</td>` +
+      `<td class="val ${isNull ? "null" : ""}">${isNull ? "null" : esc(String(v))}<span class="badge b-${src}">${src}</span>${ev}${notes}</td></tr>`;
+  }).join("");
+  box.innerHTML = meta + `<table>${rows}</table>`;
+  box.querySelectorAll("tr.row").forEach(r => r.onclick = () => goPage(+r.dataset.page));
+}
+
+function highlight(text, v) {
+  const s = esc(text);
+  if (v === null || v === undefined) return s;
+  const needle = esc(String(v));
+  const i = s.toLowerCase().indexOf(needle.toLowerCase());
+  return i < 0 ? s : s.slice(0, i) + "<mark>" + s.slice(i, i + needle.length) + "</mark>" + s.slice(i + needle.length);
+}
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+$("#download").onclick = () => {
+  if (!current?.json) return;
+  const blob = new Blob([JSON.stringify(current.json, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = current.plik.replace(/\.pdf$/i, ".json"); a.click();
+};
+</script>
+</body>
+</html>
