@@ -946,11 +946,11 @@ function renderCase() {
 
     <div class="cols">
       <section class="card wide" aria-labelledby="h-teczka">
-        <div class="card-h"><h2 id="h-teczka">Teczka sprawy</h2><span class="st-muted" style="font-size:13px">Kliknij dokument, aby sprawdzić dane</span><button class="btn sm" type="button" data-pick="pickFiles">Dodaj pliki</button></div>
-        <div class="tw"><table><thead><tr><th>Plik</th><th>Rodzaj dokumentu</th><th title="Jak pewne jest rozpoznanie rodzaju dokumentu">Pewność</th><th>Stan sprawdzenia</th></tr></thead><tbody>
+        <div class="card-h"><h2 id="h-teczka">Teczka sprawy</h2><button class="btn sm" type="button" data-pick="pickFiles">Dodaj pliki</button></div>
+        <div class="tw"><table><thead><tr><th>Plik</th><th>Rodzaj dokumentu</th><th>Stan sprawdzenia</th><th><span class="sr-only">Akcje</span></th></tr></thead><tbody>
         ${its.map((it, i) => { const s = stateOf(it), c = counts(it), conf = confidence(it);
           const ver = s === "pending" ? '<span class="spinner"></span> analiza…' : s === "err" ? `<span class="st-bad">błąd</span>` : s === "rej" ? '<span class="st-muted">nierozpoznany, bez danych</span>' : c.todo ? `<span class="st-warn">${c.todo} ${plural(c.todo, "pole", "pola", "pól")} do sprawdzenia</span>` : '<span class="st-ok">zatwierdzone</span>';
-          return `<tr class="click" data-doc="${i}" tabindex="0"><td><b>${esc(it.plik)}</b></td><td>${s === "pending" ? "" : tag(it.klasa)}</td><td>${it.klasa ? conf.level : '<span class="st-muted">—</span>'}</td><td class="nw">${ver}</td></tr>`; }).join("")}
+          return `<tr class="click" data-doc="${i}" tabindex="0"><td><b>${esc(it.plik)}</b></td><td>${s === "pending" ? "" : tag(it.klasa)}${it.klasa ? `<small class="st-muted" style="display:block;font-size:12.5px;margin-top:2px" title="Jak pewne jest rozpoznanie rodzaju dokumentu">pewność rozpoznania: ${conf.level}</small>` : ""}</td><td class="nw">${ver}</td><td style="text-align:right"><button class="btn sm ${s === "ok" && c.todo ? "primary" : ""}" type="button" data-opendoc="${i}" aria-label="Otwórz ${esc(it.plik)}" ${s === "pending" ? "disabled" : ""}>Otwórz</button></td></tr>`; }).join("")}
         </tbody></table></div>
       </section>
       <div class="narrow">
@@ -963,7 +963,7 @@ function renderCase() {
   </div>`;
   $$("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   $$("[data-pick]").forEach(b => b.onclick = () => { S.addTo = name; S.replaceItem = null; $("#" + b.dataset.pick).click(); });
-  $$("tr[data-doc]").forEach(r => { const open = () => go("dokument", { item: its[+r.dataset.doc] }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
+  $$("tr[data-doc]").forEach(r => { const open = () => go("dokument", { item: its[+r.dataset.doc] }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter" && e.target === r) open(); }; });
   $$("a[data-case]").forEach(a => a.onclick = (e) => { e.preventDefault(); go("sprawa", { caseName: a.dataset.case }); });
   $("#zipCase").onclick = () => downloadZip(its, `aktomat_${name}.zip`);
   $("#delCase").onclick = () => deleteCase(name);
@@ -979,10 +979,10 @@ function relatedCases(name, zp) {
 function renderQueue() {
   const list = S.items.filter(i => i.klasa && matches(i)).map(i => ({ i, c: counts(i) })).sort((a, b) => b.c.todo - a.c.todo);
   $("#main").innerHTML = `<div class="page"><div><h1>Kolejka weryfikacji</h1><p class="lead">Dokumenty, w których coś wymaga Twojej uwagi: pole nie zostało znalezione, wartość podał model AI albo numer (NIP, REGON, rachunek) ma błędną sumę kontrolną. Każde zatwierdzenie trafia do dziennika zmian.</p></div>
-    <section class="card">${list.length ? `<div class="tw"><table><thead><tr><th>Plik</th><th>Sprawa</th><th>Rodzaj dokumentu</th><th>Do sprawdzenia</th><th>Zatwierdzone</th></tr></thead><tbody>
-    ${list.map(({ i, c }, k) => `<tr class="click" data-k="${k}" tabindex="0"><td><b>${esc(i.plik)}</b></td><td>${esc(i.sprawa)}</td><td>${tag(i.klasa)}</td><td>${c.todo ? `<span class="st-warn">${c.todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${c.done} z ${c.total}</td></tr>`).join("")}
+    <section class="card">${list.length ? `<div class="tw"><table><thead><tr><th>Plik</th><th>Sprawa</th><th>Rodzaj dokumentu</th><th>Do sprawdzenia</th><th>Zatwierdzone</th><th><span class="sr-only">Akcje</span></th></tr></thead><tbody>
+    ${list.map(({ i, c }, k) => `<tr class="click" data-k="${k}" tabindex="0"><td><b>${esc(i.plik)}</b></td><td>${esc(i.sprawa)}</td><td>${tag(i.klasa)}</td><td>${c.todo ? `<span class="st-warn">${c.todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${c.done} z ${c.total}</td><td style="text-align:right"><button class="btn sm ${c.todo ? "primary" : ""}" type="button" data-openk="${k}" aria-label="Otwórz ${esc(i.plik)}">Otwórz</button></td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty"><h3>Nie ma nic do sprawdzenia</h3>Po wczytaniu dokumentów pojawią się tu te, które wymagają uwagi.</div>`}</section></div>`;
-  $$("tr[data-k]").forEach(r => { const open = () => go("dokument", { item: list[+r.dataset.k].i }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
+  $$("tr[data-k]").forEach(r => { const open = () => go("dokument", { item: list[+r.dataset.k].i }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter" && e.target === r) open(); }; });
 }
 
 /* ---------- pewność klasyfikacji ---------- */
