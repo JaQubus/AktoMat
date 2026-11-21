@@ -1,0 +1,27 @@
+# Ustawienia ogólne. Klucz API NIE trafia tutaj, tylko do pliku .env (LLM_API_KEY).
+
+llm:
+  enabled: true
+  # Dowolne API zgodne z OpenAI. Domyślnie Scaleway Generative APIs (Paryż, UE).
+  # Nadpisywane przez LLM_BASE_URL / LLM_MODEL w .env (np. lokalny vLLM/Ollama z tym samym modelem).
+  base_url: https://api.scaleway.ai/v1
+  model: gpt-oss-120b
+  temperature: 0
+  max_tokens: 6000
+  timeout: 180
+  retries: 3
+  json_mode: true
+  max_doc_chars: 24000      # ile tekstu dokumentu trafia do modelu (kluczowe dane są na pierwszych stronach)
+  extra_body:
+    reasoning_effort: medium
+
+ocr:
+  enabled: true
+  lang: pol
+  dpi: 300
+  min_chars_per_page: 40    # strona z mniejszą liczbą znaków jest traktowana jak skan
+  max_pages: 8              # OCR tylko pierwszych N stron (0 = wszystkie)
+  # tesseract_cmd: C:\Program Files\Tesseract-OCR\tesseract.exe   # albo TESSERACT_CMD w .env
+
+classify_head_chars: 6000   # klasyfikacja na podstawie początku dokumentu
+workers: 4                  # równoległe dokumenty

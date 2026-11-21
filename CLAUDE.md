@@ -1,53 +1,15 @@
-# ODWOŁANIA2JSON — HackNation 2026 (wyzwanie UZP)
+# Odwołania2JSON (HackNation 2026, wyzwanie UZP)
 
-Aplikacja: paczka dokumentów odwołania do KIO (ZIP) → ustrukturyzowana „Karta Odwołania” (JSON) z oceną formalną F1–F13 i źródłem każdej informacji. ~24 h. **Priorytet: działający end-to-end na PRAWDZIWYCH danych z ./data, nie liczba funkcji.**
+PDF (odwołanie / pełnomocnictwo / potwierdzenie przelewu) → JSON zgodny ze schematami z https://github.com/Urzad-Zamowien-Publicznych/hacknation-2026 (`oczekiwane-json/`). Ocena: F1 per pole na ukrytym zbiorze realnych spraw (także skany).
 
-## Źródła prawdy
-- `docs/OPZ_starsza_pelne_zalaczniki.pdf` — Zał. C (JSON Karty, klucze 1:1!), D (ground_truth.yaml), E (raport accuracy), G (kryteria F1–F12). Tekst: wyciągany PyMuPDF.
-- `docs/OPZ_nowsza.pdf` — dodaje e-Doręczenia (ADE/BAE), dopuszcza rozwiązanie równoważne zamiast n8n.
-- Reszta docs: UZP_postepowanie_odwolawcze_od_2026-03-13, projekt_nowelizacji_Pzp_wpis, protokol_WKR, przykład orzeczenia KIO 4463/25, prezentacja UZP.
+## Zasady
+- Struktura JSON 1:1 z `output_template` w `config/classes/*.yaml`; klasa = nazwa wzorcowego pliku UZP.
+- Nowe klasy/pola tylko przez YAML (to 50% oceny finałowej). Kod w `odw2json/` ma być ogólny.
+- Nie zgadywać: wartość spoza tekstu dokumentu → `null` (FP kosztuje). Weryfikacja w `normalize.grounded`.
+- LLM tylko open-weight przez API w UE (domyślnie Scaleway, `gpt-oss-120b`), klucz w `.env`, nigdy w repo.
+- Python 3.13+, zależności w `requirements.txt`, uruchamianie: `start.bat` / `python -m odw2json`.
 
-## Kontrakt danych
-- Model Pydantic v2 Karty = kontrakt; klucze 1:1 z Zał. C: `metadata, naglowek, informacje_ogolne, odwolujacy, reprezentacja, zamawiajacy, weryfikacja, stopka, audit_trail`.
-- Pole: `{value, status: verified|warning|missing|not_applicable, source: "Plik.pdf > strona: N" | "KRS API" | "BRAK DANYCH"}` + (nasze rozszerzenie) krótki cytat dowodu. Brak dowodu → `null` + `missing`. Nigdy nie zgadywać.
-- Statusy reguł: spełnione / niespełnione / do_weryfikacji_ręcznej / nie_dotyczy. Niepewne dane → do_weryfikacji_ręcznej, NIGDY niespełnione. `braki_formalne = true` gdy cokolwiek niespełnione.
-- Priorytet źródeł przy konflikcie: rejestry > podpis > dokument oryginalny > dokument wtórny.
-- Żadnych kwot/terminów na sztywno w kodzie → `config/rules.yaml`. Nie wymyślać przepisów ani kwot spoza promptu i OPZ.
-- PESEL i dane osobowe z certyfikatów maskować w UI i logach.
-
-## Stack
-Python 3.11, FastAPI, Pydantic v2, pytest, uv. PyMuPDF (PDF z tekstem), OCR tylko dla skanów (docling/Tesseract `pol`). LLM przez LiteLLM w `llm.py` (model/klucz z .env, domyślnie Claude, przełączalny na lokalny jedną zmienną). pyHanko (PAdES); XAdES/CAdES = do weryfikacji ręcznej. Rejestry: KRS, eZamówienia (timeout+retry+backoff+cache na dysku `*_api.json`+tryb offline), CEIDG/REGON mock. Frontend: React+Vite+TS+Tailwind+pdf.js. `docker compose up`.
-
-## Pipeline (backend/pipeline/)
-ingest → text → classify (8 kategorii) → extract → validate → signatures → registries → rules (F1–F13) → output (JSON, Karta DOCX, wezwanie DOCX art. 518 ust. 1 Pzp, 3 dni).
-
-## Kamienie milowe (commit po każdym, testy zielone)
-M1 ✅ szkielet+model+fixtures · synth ✅ dane syntetyczne · M5 ✅ rules+testy · następne: M2 ingest/text/classify · M3 extract · M4 validate+registries · M6 output+API · M7 eval+accuracy · M8 frontend · M9 `make demo` offline.
-
-## Komendy (uzupełniać w miarę powstawania)
-Środowisko: brak systemowego Pythona; używać `uv` (`uv run ...`). Docker 29, Node 24 dostępne.
-- run: `docker compose up --build` (UI :5173, API :8000) · test: `make test` = `cd backend && uv run --python 3.11 --extra dev python -m pytest -q` · synth: `make synth` · eval: `make eval` (M7)
-
-## Decyzje
-- (Krok 0) Tekst dokumentów OPZ wyciągnięty do scratchpada przez `uv run --with pymupdf`.
-- (M1) Układ: `backend/{app,pipeline,tests}`, `fixtures/`, `config/`, `scripts/`, `frontend/`. Model Karty: `backend/app/models/karta.py`; rozszerzenia (`dowod`, `weryfikacja.kryteria`, `metadata.rozszerzenia_kontraktu`) pomijane w JSON gdy puste, więc round-trip fixture = 1:1.
-- (M1) Windows Application Control blokuje `.exe` launchery i natywne moduły node (pytest.exe, rollup): używać `python -m pytest`; `vite build` działa tylko w Dockerze. Lokalnie: `node node_modules/typescript/bin/tsc --noEmit`.
-- (Plan) Dane UZP dojdą później. Najpierw dane syntetyczne (`data/synthetic/`, FIKCYJNE, z ground_truth.yaml) + 1 publiczne odwołanie (`data/public/`, ustawa z 2020 r., tylko do testów ekstrakcji, nie reguł F1–F12). Ścieżka danych z `.env` (DATA_DIR), zero założeń o nazwach plików. Po pojawieniu się `data/uzp/`: raport Kroku 0 + porównanie struktury z syntetycznymi + poprawka generatora.
-- (Synth) `scripts/make_synthetic_cases.py` → `data/synthetic/` (5 spraw FIKCYJNYCH; ZIP-y w repo). Wzorce `ground_truth/<id>.yaml` (Zał. D) + `<id>.rules.yaml` (oczekiwane F1–F13, nasze rozszerzenie do testów M5). Wzorzec zakłada `shift_weekend_holiday=true` (sprawa 4: termin sob. 24.01.2026 → pon. 26.01.2026). Wszystkie podpisy: certyfikat samopodpisany, NIEKWALIFIKOWANY → oczekiwane F4 = do_weryfikacji_ręcznej (niepewne ≠ niespełnione; braki_formalne zależy tylko od F2/F5/F6). `QUALIFIED_SIM_CASES` w generatorze symuluje kwalifikowany (QcCompliance). Sprawa 4: neutralne nazwy plików + zagnieżdżony ZIP; sprawa 2: podfolder; sprawa 5: skan przelewu (0 znaków tekstu).
-- (Synth) Mock KRS: `GET /mock/krs/api/krs/OdpisAktualny/{krs}?rejestr=P` z `data/synthetic/krs_mock/`. Kształt JSON jest z pamięci (api-krs.ms.gov.pl było niedostępne z tej maszyny) → zweryfikować z żywym API. KRS fikcyjne: 0009000100+ (poza zakresem istniejących); NIP prefiks 999, REGON prefiks 99 (poprawne sumy kontrolne).
-- (Synth) Python z plikami zawierającymi PL znaki: `python -I -X utf8` (`-I` ignoruje PYTHONUTF8).
-- (Public) `data/public/IQVIA220620odwolanieABM.pdf` (48 str., warstwa tekstowa) pobrany przez PowerShell (curl w bashu nie miał DNS). Katalog poza gitem.
-- (M5) Reguły: `backend/pipeline/rules.py` (`evaluate(Facts, cfg) -> RulesResult`), kalendarz: `pipeline/calendar_pl.py`, parametry: `config/rules.yaml` (zero kwot/terminów w kodzie). Przy nieustalonych danych wejściowych (np. tryb powiadomienia, próg UE) reguła liczy WSZYSTKIE interpretacje: wszystkie zgodne → pewny wynik, inaczej do_weryfikacji_ręcznej. Czas podpisu porównywany jako data w Europe/Warsaw.
-- (M5) F5: dopasowanie nazwisk = NFKD bez diakrytyków (ł osobno) + rapidfuzz token_set_ratio ≥ 85 + strażnik tokenów (inicjał ok; „Jan” ≠ „Janusz” → <85 → ręcznie). Wynik 70–85 → do_weryfikacji. F7: brak dowodu opłaty 17 zł → do_weryfikacji (nie niespełnione; możliwe zwolnienia), przy braku pełnomocnika → nie_dotyczy. F9–F11: brak treści = niespełnione tylko gdy `text_quality_ok`, inaczej ręcznie. F4: ważny podpis bez ustalonej kwalifikacji → ręcznie.
-- (M5) Odnośniki do przepisów oznaczone „(?)” w config/rules.yaml (inne niż art. 515 ust. 1 pkt 1 lit. a z Zał. C) — do potwierdzenia z mentorem.
-
-## Stan danych / ryzyka
-- `./data/uzp` — dane UZP jeszcze nie dostarczone (dojdą później); pracujemy na syntetycznych.
-
-## Pytania do mentora UZP
-- Art. 8 ust. 4 Pzp (przesunięcie terminu z soboty/niedzieli/święta) — źródła UZP sprzeczne; domyślnie flaga `shift_weekend_holiday` w config.
-- Czy są wzorcowe Karty DOC/DOCX do wygenerowania ground_truth? Ile spraw, czy są skany?
-- F13 / e-Doręczenia: skąd brać adres ADE (BAE) w danych testowych?
-- Numer rachunku UZP do wpisu (klasyfikacja przelewów) i dokładna kwota/numer opłaty skarbowej 17 zł — w danych syntetycznych rachunek jest FIKCYJNY; jaki jest prawdziwy numer rachunku UZP?
-- Czy odwołanie podpisane niekwalifikowanym podpisem z nieznanego CA ma być „niespełnione” czy „do weryfikacji ręcznej” (F4)? Przyjęliśmy: do weryfikacji.
-- Potwierdzić podstawy prawne terminów 15/5/10 dni i zaniechania (w config oznaczone „(?)”); czy nadpłata wpisu jest „prawidłowa” (przyjęto: tylko równość z tolerancją 0,01); czy brak dowodu opłaty 17 zł bez zwolnienia ma dawać „niespełnione” (przyjęto: do weryfikacji).
+## Komendy
+- testy: `python -m pytest -q`
+- F1 na danych treningowych: `python -m odw2json eval --gt <hacknation-2026>/dane [--no-llm]` → `eval_report/raport.md`, `bledy.csv`
+- GUI: `python -m odw2json web`

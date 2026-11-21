@@ -1,0 +1,95 @@
+# Klasa dokumentu: POTWIERDZENIE PRZELEWU (wpis od odwołania, opłata skarbowa od pełnomocnictwa itp.).
+# Nazwa klasy = nazwa wzorcowego JSON-a UZP (przelew.json).
+name: przelew
+description: Potwierdzenie wykonania przelewu bankowego (np. wpis od odwołania, opłata skarbowa)
+enabled: true
+
+classify:
+  min_score: 5
+  filename_hints: [przelew, potwierdzenie, transakc, wplat, wpłat]
+  filename_weight: 1
+  keywords:
+    - {pattern: 'przelew', weight: 2}
+    - {pattern: 'potwierdzenie (wykonania |realizacji )?(przelewu|operacji|transakcji)|polecenie przelewu', weight: 3}
+    - {pattern: 'rachunek (nadawcy|odbiorcy|zleceniodawcy|beneficjenta|obciazany|uznawany)|z rachunku|na rachunek', weight: 3}
+    - {pattern: 'tytul(em| przelewu)?\b', weight: 1}
+    - {pattern: 'kwota', weight: 1}
+    - {pattern: '\bpl\s?\d{2}(\s?\d{4}){6}\b|\b\d{2}(\s?\d{4}){6}\b', weight: 2}
+  negative:
+    - {pattern: 'zarzut nr|wnosze odwolanie', weight: 4}
+    - {pattern: 'mocodawc\w* (jest|udziela)|udzielam pelnomocnictwa', weight: 4}
+
+output_template:
+  przelew_bankowy:
+    data_operacji: null
+    kwota: null
+    na_rachunek: null
+    numer_transakcji: null
+    tytul: null
+    z_rachunku: null
+
+sections:
+  nadawca:
+    start: '(?m)^\s*(?:Zleceniodawca|Nadawca|Płatnik|Dane nadawcy|Dane zleceniodawcy|Z rachunku|Rachunek obciążany)\b'
+    end: '(?m)^\s*(?:Odbiorca|Beneficjent|Adresat|Dane odbiorcy|Na rachunek|Rachunek uznawany|Kwota|Tytu[łl])\b'
+    flags: im
+    max_chars: 600
+  odbiorca:
+    start: '(?m)^\s*(?:Odbiorca|Beneficjent|Adresat przelewu|Adresat|Dane odbiorcy|Na rachunek|Rachunek uznawany)\b'
+    end: '(?m)^\s*(?:Zleceniodawca|Nadawca|Płatnik|Dane nadawcy|Kwota|Tytu[łl]|Data|Status|Numer|Typ)\b'
+    flags: im
+    max_chars: 600
+
+llm_instructions: |
+  - z_rachunku: rachunek nadawcy/zleceniodawcy/płatnika (obciążany); na_rachunek: rachunek odbiorcy/beneficjenta (uznawany). Same cyfry (26), bez "PL" i spacji.
+  - kwota: kwota przelewu jako liczba (np. 15000.0), nie opłata/prowizja banku.
+  - data_operacji: data wykonania/operacji/transakcji (RRRR-MM-DD), nie data wygenerowania wydruku.
+  - numer_transakcji: identyfikator / numer referencyjny operacji nadany przez bank; null jeśli brak.
+  - tytul: tytuł przelewu dokładnie jak w dokumencie, w jednej linii.
+
+fields:
+  - path: przelew_bankowy.data_operacji
+    type: date
+    description: Data operacji (wykonania) przelewu.
+    rules:
+      - pattern: '(?:Data\s+(?:operacji|transakcji|wykonania|realizacji|księgowania|zlecenia)|w\s+dniu|Data(?!\s+(?:wygenerowania|wydruku|sporządzenia|utworzenia)))[^\n\d]{0,80}?\n?[^\n\d]{0,20}?(?P<v>\d{1,2}[.-]\d{1,2}[.-]\d{4}|\d{4}-\d{2}-\d{2}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4})'
+        flags: i
+
+  - path: przelew_bankowy.kwota
+    type: amount
+    description: Kwota przelewu.
+    rules:
+      - pattern: '(?:Kwota(?:\s+(?:operacji|przelewu|transakcji))?|Wartość|Suma|w\s+kwocie)[^\n\d]{0,80}?\n?[^\n\d]{0,20}?(?P<v>-?\d{1,3}(?:[ \xa0.]?\d{3})*(?:,\d{2})|\d+(?:\.\d{2}))'
+        flags: i
+
+  - path: przelew_bankowy.z_rachunku
+    type: account
+    description: Numer rachunku nadawcy (26 cyfr).
+    rules:
+      - pattern: '(?:Rachunek\s+(?:nadawcy|zleceniodawcy|płatnika|obciążany)|Z\s+rachunku(?:\s+nr)?|Nr\s+rachunku\s+nadawcy)[\s.:]*(?P<v>(?:PL)?\s?\d{2}(?:\s?\d{4}){6})'
+        flags: i
+      - {pattern: '(?P<v>(?:PL)?\s?\d{2}(?:\s?\d{4}){6})', section: nadawca}
+
+  - path: przelew_bankowy.na_rachunek
+    type: account
+    description: Numer rachunku odbiorcy (26 cyfr).
+    rules:
+      - pattern: '(?:Rachunek\s+(?:odbiorcy|beneficjenta|uznawany)|Na\s+rachunek(?:\s+nr)?|Do\s+rachunku|Nr\s+rachunku\s+odbiorcy)[\s.:]*(?P<v>(?:PL)?\s?\d{2}(?:\s?\d{4}){6})'
+        flags: i
+      - {pattern: '(?P<v>(?:PL)?\s?\d{2}(?:\s?\d{4}){6})', section: odbiorca}
+
+  - path: przelew_bankowy.numer_transakcji
+    type: refno
+    description: Identyfikator / numer referencyjny transakcji.
+    rules:
+      - pattern: '(?:Numer\s+referencyjny|Identyfikator\s+(?:operacji|transakcji)|Numer\s+(?:transakcji|operacji)|Nr\s+ref\.?|Nr\s+(?:transakcji|operacji)|Numer\s+transakcji\s+operacji|ID\s+(?:transakcji|operacji))(?:\s+(?:operacji|transakcji))?[^\n]{0,80}?\n?[^\n]{0,20}?(?P<v>(?-i:(?=[A-Z/\-]*\d)[A-Z0-9][A-Z0-9/\-]{5,}))'
+        flags: i
+
+  - path: przelew_bankowy.tytul
+    type: text
+    description: Tytu[łl] przelewu.
+    rules:
+      - pattern: '(?:Tytu[łl]\s+przelewu|Tytu[łl]em|Tytu[łl]|Opis)\s*:?\s*„(?P<v>[^”]{3,400})”'
+        flags: is
+      - pattern: '(?:Tytu[łl]\s+przelewu|Tytu[łl]em|Tytu[łl]|TYTU[ŁL]|Opis|OPIS)[\s.:]*\n?\s*(?P<v>.+?)(?=\n\s*(?i:Kwota|Numer|Identyfikator|Data|Status|Zleceniodawca|Odbiorca|Nr\b|Rachunek|Typ|Kanał|Waluta|Tryb|Beneficjent|Płatnik|Nadawca|Opłata|Bank\b|Szczegóły|Potwierdzenie|Wartość|Adresat|Dane|Z\s+rachunku|Na\s+rachunek)|\n[^\n]*(?:\.{5,}|-{8,}|\*\*\*)|\n\s*\n|\Z)'
+        flags: si

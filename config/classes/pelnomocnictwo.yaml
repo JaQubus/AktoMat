@@ -1,0 +1,120 @@
+# Klasa dokumentu: PEŁNOMOCNICTWO (procesowe) w postępowaniu odwoławczym.
+name: pelnomocnictwo
+description: Pełnomocnictwo udzielone przez wykonawcę (mocodawcę) pełnomocnikom do działania przed KIO
+enabled: true
+
+classify:
+  min_score: 5
+  filename_hints: [pelnomoc, pełnomoc]
+  filename_weight: 1
+  keywords:
+    - {pattern: 'p\s?e\s?l\s?n\s?o\s?m\s?o\s?c\s?n\s?i\s?c\s?t\s?w\s?o', weight: 3}
+    - {pattern: 'mocodawc', weight: 3}
+    - {pattern: 'udziela\w* pelnomocnictwa|ustanawia\w* pelnomocnik|niniejszym udzielam', weight: 3}
+    - {pattern: 'pelnomocnictwo przyjmuje|umocowan', weight: 2}
+    - {pattern: 'upowazniam|upowaznia\w*|do reprezentowania', weight: 2}
+  negative:
+    - {pattern: 'zarzut nr|zarzuca(m|my)? zamawiajac', weight: 3}
+    - {pattern: 'wnosze odwolanie|wnosze o uwzglednienie', weight: 3}
+    - {pattern: 'potwierdzenie (wykonania )?(przelewu|operacji)|rachunek (nadawcy|odbiorcy|zleceniodawcy)', weight: 4}
+
+output_template:
+  mocodawca:
+    - data:
+        imie_nazwisko: null
+        krs: null
+        nazwa: null
+        nip: null
+        typ: null
+      podpisujacy:
+        - imie_nazwisko: null
+  pelnomocnicy:
+    - imie_nazwisko: null
+      pesel: null
+
+sections:
+  podpisy_wszystkie: {start: '\A', end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo', flags: i}
+  mocodawca:
+    start: '\A'
+    end: 'udziela\w*\s+pełnomocnictwa|udzielam|ustanawia|niniejszym|§\s*2|Pełnomocnik(?:iem)?\s*:|\bPełnomocnik\b\s*\n'
+    flags: i
+    max_chars: 2500
+  podpisy:
+    start: '(?m)^\s*(?:Mocodawca|Za Mocodawcę|W imieniu Mocodawcy|W imieniu [^\n]{3,120}|Podpis\w* Mocodawc\w*)\s*:?\s*$'
+    end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo|Pełnomocni(?:k|cy)\s*:'
+    flags: i
+
+lists:
+  mocodawca: {section: mocodawca, split: '(?:^|[\s;:])\d\)\s+', require: 'KRS|NIP|REGON'}
+  'mocodawca[*].podpisujacy':
+    section: podpisy_wszystkie
+    split: '^\s*(?:W imieniu|Za)\s+[^\n]{3,150}?:?\s*$'
+
+llm_instructions: |
+  - mocodawca: podmiot(y) udzielający pełnomocnictwa. Przy konsorcjum (wykonawcy wspólnie ubiegający się) - osobny element listy dla każdego członka, w kolejności z dokumentu, każdy z własnymi podpisującymi.
+  - mocodawca[].data.typ: "osoba_prawna" dla spółek, fundacji, jednostek itp.; "osoba_fizyczna" dla osoby fizycznej, także prowadzącej jednoosobową działalność gospodarczą (CEIDG).
+  - mocodawca[].data.imie_nazwisko: imię i nazwisko TYLKO gdy mocodawca jest osobą fizyczną; dla osoby prawnej null (nie wpisuj tu członków zarządu).
+  - mocodawca[].data.nazwa: pełna nazwa (firma) mocodawcy, np. "DUDEK-TECH Jarosław Dudek" albo "Imperon Serwis sp. z o.o.". krs i nip - tylko jeśli podane w dokumencie.
+  - podpisujacy: osoby podpisujące pełnomocnictwo w imieniu danego mocodawcy (blok podpisów, zwykle z funkcją: Prezes Zarządu, Prokurent, Wspólnik...). Bez funkcji i tytułów, w mianowniku. Nie wpisuj tu pełnomocników (którzy podpisują "Pełnomocnictwo przyjmuję").
+  - pelnomocnicy: osoby, którym udzielono pełnomocnictwa (zwykle z tytułem adw. / r. pr. / radca prawny), imię i nazwisko w mianowniku bez tytułu; pesel tylko jeśli podany (11 cyfr), inaczej null.
+
+fields:
+  - path: 'mocodawca[*].data.nazwa'
+    type: name
+    description: Pełna nazwa mocodawcy.
+    rules:
+      - {kind: entity_name, after: 'Mocodawcą\s+jest'}
+      - {kind: entity_name, after: 'pod\s+firmą'}
+      - {kind: entity_name, after: 'Działając\s+w\s+imieniu'}
+      - {kind: entity_name, after: '\(\s*Konsorcjum\s*\)\s*:\s*1\)'}
+      - kind: entity_name
+        section: mocodawca
+        skip: '^\s*(?:pe[łl]nomocnictwo|p\s*e\s*ł\s*n|procesowe|mocodawca|§|dane\b)|^\s*[A-ZŁŚŻŹĆ][\wąćęłńóśźż -]+,\s*(?:dnia\s+)?\d|^\s*\d'
+
+  - path: 'mocodawca[*].data.krs'
+    type: krs
+    description: KRS mocodawcy (osoba prawna) albo null.
+    rules:
+      - {pattern: 'KRS\s*(?:nr\s*)?:?\s*(?P<v>\d{10})', section: mocodawca}
+
+  - path: 'mocodawca[*].data.nip'
+    type: nip
+    description: NIP mocodawcy albo null.
+    rules:
+      - {pattern: 'NIP\s*:?\s*(?P<v>\d{3}[- ]?\d{2,3}[- ]?\d{2,3}[- ]?\d{2,3})', section: mocodawca}
+
+  - path: 'mocodawca[*].data.imie_nazwisko'
+    type: person
+    description: Imię i nazwisko mocodawcy będącego osobą fizyczną; dla osoby prawnej null.
+    rules:
+      - {pattern: 'Ja,?\s+niżej\s+podpisan\w*\s*:?\s*(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)', flags: ''}
+
+  - path: 'mocodawca[*].data.typ'
+    type: string
+    require_grounding: false
+    description: '"osoba_prawna" albo "osoba_fizyczna".'
+    derive:
+      kind: case
+      when:
+        - {notnull: 'mocodawca[*].data.imie_nazwisko', value: osoba_fizyczna}
+      else: osoba_prawna
+
+  - path: 'mocodawca[*].podpisujacy[*].imie_nazwisko'
+    type: person
+    description: Osoba podpisująca pełnomocnictwo w imieniu mocodawcy.
+    rules:
+      - {kind: signatories, mode: dots, end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo|Pełnomocni(?:k|cy)\s*:'}
+      - {kind: signatories, start: '(?m)^\s*(?:Mocodawca|Za Mocodawcę|W imieniu Mocodawcy|W imieniu [^\n]{3,120}|Podpis\w* Mocodawc\w*|Mocodawca/podpis\w*)\s*:?\s*$', end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo|Pełnomocni(?:k|cy)\s*:', last: true}
+      - {pattern: 'Ja,?\s+niżej\s+podpisan\w*\s*:?\s*(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)', flags: ''}
+
+  - path: 'pelnomocnicy[*].imie_nazwisko'
+    type: person
+    description: Imię i nazwisko pełnomocnika w mianowniku, bez tytułu.
+    rules:
+      - {kind: titled_persons, all: true}
+
+  - path: 'pelnomocnicy[*].pesel'
+    type: pesel
+    description: PESEL pełnomocnika (11 cyfr), jeśli podany.
+    rules:
+      - {pattern: 'PESEL\s*:?\s*(?P<v>\d{11})', all: true}
