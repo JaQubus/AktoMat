@@ -73,6 +73,8 @@ class OCR:
     def __init__(self, cfg: dict):
         self.cfg = cfg
         self.engine, self.lang, self.note = self._pick()
+        if self.note:
+            log.warning(self.note)
 
     def _tesseract(self):
         try:
@@ -94,6 +96,17 @@ class OCR:
         lang = self.cfg.get("lang", "pol")
         if want in ("auto", "tesseract"):
             langs = self._tesseract()
+            if langs is not None and not langs:
+                tp = os.environ.get("TESSDATA_PREFIX")
+                note = ("Tesseract nie widzi żadnych języków - sprawdź TESSDATA_PREFIX"
+                        + (f" ({tp})" if tp else "") + "; używam RapidOCR (bez polskich znaków)")
+                if want == "tesseract":
+                    return None, None, note
+                try:
+                    import rapidocr_onnxruntime  # noqa: F401
+                    return "rapidocr", None, note
+                except ImportError:
+                    return None, None, note
             if langs:
                 if lang in langs:
                     return "tesseract", lang, None
