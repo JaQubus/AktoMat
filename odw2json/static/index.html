@@ -4,200 +4,753 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Odwołania2JSON</title>
+<meta name="description" content="Wczytywanie, automatyczna klasyfikacja i ekstrakcja danych z odwołań do KIO, pełnomocnictw i potwierdzeń przelewu.">
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #6a7385; --line: #e2e5eb;
-    --accent: #1f5fbf; --accent-soft: #e8f0fc;
-    --llm: #6b3fbf; --llm-soft: #f0eafb; --rules: #1d7a4d; --rules-soft: #e6f4ec;
-    --derived: #8a6a12; --derived-soft: #faf3df; --none: #9aa1ad; --warn: #b4472c;
+    --bg: #eef1f5; --panel: #ffffff; --panel-2: #f7f9fb; --ink: #14213a; --muted: #4f5b70; --line: #d5dbe4; --line-strong: #b6c0cf;
+    --brand: #12346b; --brand-ink: #ffffff; --brand-2: #0e2a57;
+    --accent: #1a56b8; --accent-ink: #ffffff; --accent-soft: #e5eefc; --focus: #f2a900;
+    --ok: #12703f; --ok-soft: #e3f3ea; --warn: #8a5a00; --warn-soft: #fdf2d8; --bad: #a12a1c; --bad-soft: #fbe6e2;
+    --llm: #5a34a8; --llm-soft: #efe8fb; --rules: #12703f; --rules-soft: #e3f3ea; --derived: #7a5a00; --derived-soft: #faf1d6; --manual: #0b5f86; --manual-soft: #e0f1f8;
+    --mark: rgba(242, 169, 0, .38); --mark-line: #c98a00; --viewer: #5d6778;
+    --radius: 8px; --shadow: 0 1px 2px rgba(16, 33, 58, .08), 0 2px 8px rgba(16, 33, 58, .05);
+    --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #12151b; --panel: #1a1f27; --ink: #e5e9f0; --muted: #98a2b3; --line: #2a313c;
-      --accent: #6aa0ff; --accent-soft: #1d2a40; --llm: #b597ff; --llm-soft: #2a2140;
-      --rules: #5fcf98; --rules-soft: #18302a; --derived: #e2c060; --derived-soft: #332b14; --none: #6b7280; --warn: #ff8a6b;
+      --bg: #0f141c; --panel: #171e29; --panel-2: #1c2431; --ink: #e8edf5; --muted: #a6b1c3; --line: #2c3646; --line-strong: #3e4a5d;
+      --brand: #0d2244; --brand-2: #0a1a35; --accent: #7aa7ff; --accent-ink: #0b1a33; --accent-soft: #1c2b46;
+      --ok: #6fd39d; --ok-soft: #173326; --warn: #f0c35a; --warn-soft: #332a12; --bad: #ff9b8a; --bad-soft: #3a1d19;
+      --llm: #c0a4ff; --llm-soft: #2a2242; --rules: #6fd39d; --rules-soft: #173326; --derived: #f0c35a; --derived-soft: #332a12; --manual: #7fd0f2; --manual-soft: #12303d;
+      --viewer: #262e3b;
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #0f141c; --panel: #171e29; --panel-2: #1c2431; --ink: #e8edf5; --muted: #a6b1c3; --line: #2c3646; --line-strong: #3e4a5d;
+    --brand: #0d2244; --brand-2: #0a1a35; --accent: #7aa7ff; --accent-ink: #0b1a33; --accent-soft: #1c2b46;
+    --ok: #6fd39d; --ok-soft: #173326; --warn: #f0c35a; --warn-soft: #332a12; --bad: #ff9b8a; --bad-soft: #3a1d19;
+    --llm: #c0a4ff; --llm-soft: #2a2242; --rules: #6fd39d; --rules-soft: #173326; --derived: #f0c35a; --derived-soft: #332a12; --manual: #7fd0f2; --manual-soft: #12303d;
+    --viewer: #262e3b;
+  }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { height: 100%; margin: 0; }
-  body { background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
-  header { display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-  header h1 { font-size: 16px; margin: 0; letter-spacing: .2px; }
-  header .status { color: var(--muted); font-size: 12px; }
-  header .spacer { flex: 1; }
-  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .btn:disabled { opacity: .5; cursor: default; }
-  main { flex: 1; display: grid; grid-template-columns: 240px 1fr 1fr; min-height: 0; }
-  aside { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
-  #drop { margin: 12px; padding: 18px 12px; border: 2px dashed var(--line); border-radius: 8px; text-align: center; color: var(--muted); cursor: pointer; }
-  #drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
-  #files { list-style: none; margin: 0; padding: 0 8px 12px; overflow: auto; flex: 1; }
-  #files li { padding: 8px; border-radius: 6px; cursor: pointer; margin-bottom: 4px; }
-  #files li.active { background: var(--accent-soft); }
-  #files li .name { word-break: break-all; }
-  #files li .cls { font-size: 12px; color: var(--muted); }
-  .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); }
-  .pane-head { padding: 8px 12px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: center; background: var(--panel); font-weight: 600; }
-  .pane-head .tabs { margin-left: auto; display: flex; gap: 4px; font-weight: 400; }
-  .tab { padding: 3px 10px; border-radius: 5px; cursor: pointer; color: var(--muted); }
-  .tab.on { background: var(--accent-soft); color: var(--ink); }
-  iframe { flex: 1; border: 0; width: 100%; background: #888; }
-  .empty { margin: auto; color: var(--muted); text-align: center; padding: 24px; }
-  #result { flex: 1; overflow: auto; padding: 12px; }
-  table { width: 100%; border-collapse: collapse; }
-  td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  td.path { color: var(--muted); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; width: 40%; word-break: break-all; }
-  td.val { font-weight: 500; word-break: break-word; }
-  td.val.null { color: var(--none); font-weight: 400; font-style: italic; }
-  tr.row { cursor: pointer; }
-  tr.row:hover td { background: var(--accent-soft); }
-  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 10px; margin-left: 6px; font-weight: 500; white-space: nowrap; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; display: flex; flex-direction: column; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .skip { position: absolute; left: 8px; top: -60px; background: var(--panel); color: var(--ink); padding: 8px 12px; border-radius: 6px; z-index: 10; }
+  .skip:focus { top: 8px; }
+
+  /* Pasek górny */
+  .topbar { background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; gap: 20px; padding: 0 20px; min-height: 60px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+  .brand svg { flex: none; }
+  .brand b { display: block; font-size: 17px; letter-spacing: .2px; }
+  .brand small { display: block; font-size: 12.5px; opacity: .85; }
+  nav.views { display: flex; gap: 2px; align-self: stretch; }
+  nav.views button { background: none; border: 0; color: var(--brand-ink); opacity: .8; padding: 0 14px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 600; font-size: 14px; }
+  nav.views button[aria-current="page"] { opacity: 1; border-bottom-color: var(--focus); }
+  nav.views button:hover { opacity: 1; }
+  .topbar .spacer { flex: 1; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa3b2; flex: none; }
+  .dot.on { background: #5fd38f; } .dot.off { background: #f2a900; }
+  .iconbtn { background: none; border: 1px solid rgba(255,255,255,.3); color: var(--brand-ink); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
+
+  /* Układ */
+  .view { flex: 1; min-height: 0; display: none; }
+  .view.on { display: grid; }
+  #v-analiza { grid-template-columns: 320px minmax(0, 1fr) minmax(380px, 0.9fr); }
+  .col { display: flex; flex-direction: column; min-height: 0; background: var(--panel); border-right: 1px solid var(--line); }
+  .col-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); min-height: 48px; }
+  .col-head h2 { font-size: 14px; margin: 0; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  .col-head .grow { flex: 1; min-width: 0; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink); padding: 7px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; text-decoration: none; }
+  .btn:hover:not(:disabled) { background: var(--panel-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
+  .btn.ghost { border-color: transparent; background: none; }
+  .btn.sm { padding: 4px 9px; font-size: 13px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* Wczytywanie */
+  .intake { padding: 14px; border-bottom: 1px solid var(--line); }
+  #drop { border: 2px dashed var(--line-strong); border-radius: var(--radius); padding: 18px 12px; text-align: center; background: var(--panel-2); }
+  #drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  #drop p { margin: 4px 0 12px; color: var(--muted); font-size: 13.5px; }
+  #drop strong { font-size: 15px; }
+  .pickers { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .pickers .btn { font-size: 13px; padding: 7px 6px; }
+  .counts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
+  .count { border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .count b { display: block; font-size: 18px; line-height: 1.1; }
+  .count span { font-size: 12px; color: var(--muted); }
+  .count.ok b { color: var(--ok); } .count.rej b { color: var(--warn); } .count.err b { color: var(--bad); }
+  .progress { height: 4px; background: var(--line); border-radius: 2px; margin-top: 10px; overflow: hidden; display: none; }
+  .progress.on { display: block; }
+  .progress i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+
+  #cases { flex: 1; overflow: auto; padding: 8px 8px 12px; }
+  .case { margin-bottom: 10px; }
+  .case-h { display: flex; align-items: center; gap: 6px; padding: 6px 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
+  .case-h svg { flex: none; }
+  .case-h .n { margin-left: auto; font-weight: 500; }
+  .doc { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; width: 100%; text-align: left; border: 1px solid transparent; background: none; padding: 8px 8px; border-radius: 6px; cursor: pointer; }
+  .doc:hover { background: var(--panel-2); }
+  .doc[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .doc .ic { grid-row: span 2; width: 30px; height: 36px; border-radius: 4px; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; letter-spacing: .3px; background: var(--panel-2); border: 1px solid var(--line-strong); color: var(--muted); }
+  .doc .nm { font-size: 14px; font-weight: 600; word-break: break-word; }
+  .doc .st { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ic.k-odwolanie { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .ic.k-pelnomocnictwo { background: var(--llm-soft); color: var(--llm); border-color: var(--llm); }
+  .ic.k-przelew { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+  .ic.k-rej { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+  .ic.k-err { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+  .listfoot { border-top: 1px solid var(--line); padding: 12px 14px; display: flex; gap: 8px; }
+  .listfoot .btn.primary { flex: 1; }
+
+  /* Podgląd dokumentu */
+  .viewer-col { background: var(--viewer); }
+  .viewer-col .col-head { background: var(--panel); }
+  .docname { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pager { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  #pages { flex: 1; overflow: auto; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 16px; scroll-behavior: smooth; }
+  .page { position: relative; width: calc(var(--zoom, 100) * 1%); max-width: calc(var(--zoom, 100) * 9px); background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+  .page img { display: block; width: 100%; height: 100%; }
+  .page .pn { position: absolute; right: -2px; top: -2px; transform: translateY(-100%); font-size: 12px; color: #fff; opacity: .8; }
+  .hl { position: absolute; background: var(--mark); outline: 2px solid var(--mark-line); border-radius: 2px; pointer-events: none; animation: pulse 1.2s ease-out 1; }
+  @keyframes pulse { from { box-shadow: 0 0 0 8px rgba(242,169,0,.45); } to { box-shadow: 0 0 0 0 rgba(242,169,0,0); } }
+  .placeholder { margin: auto; color: #e6eaf0; text-align: center; max-width: 360px; padding: 24px; }
+  .placeholder h3 { margin: 10px 0 6px; font-size: 17px; }
+  .placeholder p { margin: 0; opacity: .85; font-size: 14px; }
+  .toast { position: sticky; bottom: 0; align-self: center; background: var(--panel); color: var(--ink); border: 1px solid var(--line); padding: 6px 12px; border-radius: 6px; font-size: 13px; box-shadow: var(--shadow); }
+
+  /* Dane */
+  #data { flex: 1; overflow: auto; }
+  .data-col { border-right: 0; }
+  .card { margin: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); }
+  .card-b { padding: 14px; }
+  .kind { display: flex; align-items: center; gap: 12px; }
+  .kind .ic { width: 40px; height: 48px; font-size: 12px; grid-row: auto; border-radius: 5px; display: grid; place-items: center; font-weight: 800; border: 1px solid; }
+  .kind h3 { margin: 0; font-size: 18px; }
+  .kind p { margin: 2px 0 0; color: var(--muted); font-size: 13.5px; }
+  .conf { margin-left: auto; text-align: right; font-size: 12.5px; color: var(--muted); }
+  .conf { white-space: nowrap; }
+  .conf b { display: block; font-size: 14px; }
+  .conf.c-wysoka b { color: var(--ok); } .conf.c-srednia b { color: var(--warn); } .conf.c-niska b { color: var(--bad); }
+  .bars { margin-top: 12px; display: grid; gap: 6px; }
+  .bar { display: grid; grid-template-columns: 120px 1fr 44px; gap: 8px; align-items: center; font-size: 13px; }
+  .bar .track { position: relative; height: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 5px; }
+  .bar .fill { position: absolute; inset: 0 auto 0 0; background: var(--line-strong); border-radius: 4px; }
+  .bar.win .fill { background: var(--accent); }
+  .bar .thr { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); opacity: .55; }
+  .bar .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  details { margin-top: 10px; font-size: 13px; }
+  summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  details ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+  details code { font-family: var(--mono); font-size: 12px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+  .facts b { color: var(--ink); font-weight: 600; }
+  .alert { margin: 14px; padding: 12px 14px; border-radius: var(--radius); border: 1px solid; font-size: 14px; }
+  .alert.warn { background: var(--warn-soft); border-color: var(--warn); }
+  .alert.bad { background: var(--bad-soft); border-color: var(--bad); }
+  .alert h3 { margin: 0 0 4px; font-size: 15px; }
+  .alert p { margin: 4px 0; }
+  .alert code { font-family: var(--mono); background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+
+  .tabs { display: flex; gap: 2px; padding: 0 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+  .tabs button { background: none; border: 0; border-bottom: 3px solid transparent; padding: 10px 12px 8px; cursor: pointer; font-weight: 600; color: var(--muted); font-size: 14px; }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+  .tabs .grow { flex: 1; }
+  .filter { display: flex; gap: 6px; padding: 10px 14px 0; flex-wrap: wrap; align-items: center; font-size: 13px; color: var(--muted); }
+  .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); padding: 4px 10px; cursor: pointer; font-size: 13px; }
+  .seg button + button { border-left: 1px solid var(--line-strong); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+
+  .group { margin: 12px 14px 0; }
+  .group h4 { margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .field { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; background: var(--panel); }
+  .field.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .field .top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .field .path { font-family: var(--mono); font-size: 11.5px; color: var(--muted); opacity: .85; }
+  .field .r { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+  .field input { width: 100%; margin-top: 4px; border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; background: var(--panel-2); font-weight: 600; }
+  .field input:hover { border-color: var(--line-strong); }
+  .field input:focus { background: var(--panel); border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field input.null { font-weight: 400; font-style: italic; }
+  .field input::placeholder { color: var(--muted); }
+  .ev { font-size: 12.5px; color: var(--muted); margin-top: 5px; line-height: 1.45; }
+  .ev mark { background: var(--mark); color: inherit; padding: 0 1px; border-radius: 2px; }
+  .note { font-size: 12.5px; color: var(--bad); margin-top: 4px; }
+  .badge { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 10px; font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
   .b-LLM { color: var(--llm); background: var(--llm-soft); }
   .b-reguły { color: var(--rules); background: var(--rules-soft); }
   .b-wyliczone { color: var(--derived); background: var(--derived-soft); }
-  .b-brak { color: var(--none); border: 1px solid var(--line); }
-  .ev { font-size: 12px; color: var(--muted); margin-top: 3px; }
-  .ev mark { background: var(--accent-soft); color: var(--ink); }
-  .note { font-size: 12px; color: var(--warn); }
-  pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word; }
-  .meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
-  .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: s 0.8s linear infinite; display: inline-block; vertical-align: -2px; }
+  .b-brak { color: var(--muted); border-color: var(--line-strong); }
+  .b-ręcznie { color: var(--manual); background: var(--manual-soft); }
+  .pg { border: 1px solid var(--line-strong); background: var(--panel); border-radius: 5px; font-size: 12px; padding: 1px 7px; cursor: pointer; }
+  .pg:hover { border-color: var(--accent); color: var(--accent); }
+  pre { margin: 14px; padding: 12px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; font: 12.5px/1.55 var(--mono); white-space: pre-wrap; word-break: break-word; }
+  .datafoot { border-top: 1px solid var(--line); padding: 12px 14px; display: flex; gap: 8px; align-items: center; background: var(--panel); }
+  .datafoot .hint { font-size: 12.5px; color: var(--muted); margin-right: auto; }
+  .empty { margin: auto; text-align: center; color: var(--muted); padding: 32px 24px; max-width: 380px; }
+  .empty h3 { color: var(--ink); margin: 10px 0 6px; font-size: 16px; }
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: s .8s linear infinite; display: inline-block; vertical-align: -2px; flex: none; }
   @keyframes s { to { transform: rotate(360deg); } }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } .pane { min-height: 60vh; } aside { max-height: 40vh; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+  /* Klasy i raport */
+  #v-klasy, #v-raport { overflow: auto; display: none; }
+  #v-klasy.on, #v-raport.on { display: block; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 40px; }
+  .wrap > h2 { margin: 0 0 4px; font-size: 22px; }
+  .lead { color: var(--muted); margin: 0 0 18px; max-width: 760px; }
+  .lead code, .cls-card code { font-family: var(--mono); font-size: 13px; background: var(--panel-2); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--line); }
+  .cls-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+  .cls-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: var(--shadow); padding: 16px; }
+  .cls-card h3 { margin: 0; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+  .cls-card p { margin: 6px 0 10px; color: var(--muted); font-size: 14px; }
+  .kv { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+  .kv b { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  td.mono { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  .md h1 { font-size: 22px; } .md h2 { font-size: 18px; margin-top: 24px; } .md h3 { font-size: 16px; }
+  .md table { background: var(--panel); border: 1px solid var(--line); }
+  .md code { font-family: var(--mono); font-size: 12.5px; }
+  .md .tw { overflow-x: auto; }
+
+  @media (max-width: 1200px) { #v-analiza { grid-template-columns: 280px minmax(0, 1fr) minmax(340px, 1fr); } }
+  @media (max-width: 960px) {
+    #v-analiza.on { display: flex; flex-direction: column; overflow: auto; }
+    .col { border-right: 0; border-bottom: 1px solid var(--line); }
+    #cases { max-height: 40vh; }
+    .viewer-col { min-height: 70vh; }
+    .data-col { min-height: 70vh; }
+    nav.views { order: 3; width: 100%; }
+    .brand small, .chips, .topbar .spacer { display: none; }
+    .topbar { gap: 8px; padding: 0 12px; }
+    .iconbtn { margin-left: auto; }
+    nav.views button { padding: 10px 12px; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>Odwołania2JSON</h1>
-  <span class="status" id="status">łączenie…</span>
+<a class="skip" href="#main">Przejdź do treści</a>
+<header class="topbar">
+  <div class="brand">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="5" y="3" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 10h12M9 14h12M9 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="25" r="7" fill="#f2a900"/><path d="M22 25l2 2 4-4" stroke="#12346b" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div><b>Odwołania2JSON</b><small>Ekstrakcja danych z dokumentów postępowań odwoławczych</small></div>
+  </div>
+  <nav class="views" aria-label="Widoki">
+    <button type="button" data-view="analiza" aria-current="page">Analiza dokumentów</button>
+    <button type="button" data-view="klasy">Klasy dokumentów</button>
+    <button type="button" data-view="raport">Raport jakości</button>
+  </nav>
   <span class="spacer"></span>
-  <button class="btn" id="download" disabled>Pobierz JSON</button>
+  <div class="chips" id="chips" aria-live="polite"><span class="chip"><span class="dot"></span>łączenie z serwerem…</span></div>
+  <button class="iconbtn" id="theme" type="button" aria-label="Przełącz motyw jasny/ciemny" title="Motyw jasny/ciemny"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:block"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z" fill="currentColor"/></svg></button>
 </header>
-<main>
-  <aside>
-    <div id="drop">Upuść pliki PDF<br>albo kliknij, aby wybrać<input type="file" id="pick" accept="application/pdf" multiple hidden></div>
-    <ul id="files"></ul>
-  </aside>
-  <section class="pane">
-    <div class="pane-head">Dokument źródłowy</div>
-    <div class="empty" id="pdfEmpty">Wgraj PDF, aby zobaczyć podgląd.</div>
-    <iframe id="pdf" hidden title="Podgląd PDF"></iframe>
-  </section>
-  <section class="pane">
-    <div class="pane-head">Wyodrębnione dane
-      <div class="tabs"><span class="tab on" data-v="fields">Pola i źródła</span><span class="tab" data-v="json">JSON</span><span class="tab" data-v="trace">Ślad</span></div>
+
+<main id="main" style="flex:1;min-height:0;display:flex;flex-direction:column">
+  <!-- ANALIZA -->
+  <section id="v-analiza" class="view on" aria-label="Analiza dokumentów">
+    <div class="col">
+      <div class="intake">
+        <div id="drop">
+          <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--accent)"><path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+          <div><strong>Wczytaj dokumenty sprawy</strong></div>
+          <p>Przeciągnij tutaj pliki PDF, folder sprawy lub archiwum ZIP. Typ każdego dokumentu zostanie rozpoznany automatycznie.</p>
+          <div class="pickers">
+            <button class="btn" type="button" id="btnFiles">Pliki PDF</button>
+            <button class="btn" type="button" id="btnFolder">Folder</button>
+            <button class="btn" type="button" id="btnZip">ZIP</button>
+          </div>
+          <input type="file" id="pickFiles" accept="application/pdf,.pdf" multiple hidden>
+          <input type="file" id="pickFolder" webkitdirectory directory multiple hidden>
+          <input type="file" id="pickZip" accept=".zip,application/zip" multiple hidden>
+        </div>
+        <div class="counts" aria-label="Podsumowanie">
+          <div class="count ok"><b id="cOk">0</b><span>rozpoznane</span></div>
+          <div class="count rej"><b id="cRej">0</b><span>odrzucone</span></div>
+          <div class="count err"><b id="cErr">0</b><span>błędy</span></div>
+        </div>
+        <div class="progress" id="progress" role="progressbar" aria-label="Postęp analizy" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+      </div>
+      <div class="col-head"><h2 class="grow">Sprawy i dokumenty</h2></div>
+      <div id="cases" role="list" aria-label="Lista dokumentów"><div class="empty" style="padding:20px 8px">Brak wczytanych dokumentów.</div></div>
+      <div class="listfoot">
+        <button class="btn primary" type="button" id="zipAll" disabled>Pobierz wszystkie wyniki (ZIP)</button>
+        <button class="btn" type="button" id="clear" disabled title="Usuń listę">Wyczyść</button>
+      </div>
     </div>
-    <div id="result"><div class="empty">Brak wyników.</div></div>
+
+    <div class="col viewer-col">
+      <div class="col-head">
+        <div class="grow docname" id="docTitle">Podgląd dokumentu</div>
+        <div class="pager" id="pager" hidden>
+          <button class="btn sm ghost" type="button" id="zOut" aria-label="Pomniejsz">−</button>
+          <span id="zVal">100%</span>
+          <button class="btn sm ghost" type="button" id="zIn" aria-label="Powiększ">+</button>
+          <span id="pCount" style="margin-left:8px"></span>
+          <a class="btn sm" id="openPdf" target="_blank" rel="noopener">Oryginał</a>
+        </div>
+      </div>
+      <div id="pages" tabindex="0" aria-label="Strony dokumentu">
+        <div class="placeholder">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M7 3h7l5 5v12a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M14 3v5h5"/></svg>
+          <h3>Tu pojawi się dokument</h3>
+          <p>Kliknij pole w panelu danych, aby zobaczyć, skąd pochodzi wartość. Fragment zostanie zaznaczony na stronie.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col data-col">
+      <div class="col-head"><h2 class="grow">Wyodrębnione dane</h2></div>
+      <div id="data"><div class="empty"><h3>Nie wybrano dokumentu</h3>Wczytaj dokumenty i wybierz jeden z listy po lewej.</div></div>
+      <div class="datafoot" id="dataFoot" hidden>
+        <span class="hint" id="editHint"></span>
+        <button class="btn" type="button" id="revert" hidden>Cofnij poprawki</button>
+        <button class="btn primary" type="button" id="download">Pobierz JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KLASY -->
+  <section id="v-klasy" class="view" aria-label="Klasy dokumentów">
+    <div class="wrap">
+      <h2>Klasy dokumentów</h2>
+      <p class="lead">Każda klasa to jeden plik w <code>config/classes/</code>. Nowy typ dokumentu albo nowe pole dodaje się, edytując konfigurację YAML, bez zmian w kodzie programu. Poniżej lista wczytana z bieżącej konfiguracji.</p>
+      <div class="cls-grid" id="clsGrid"><div class="empty"><span class="spinner"></span></div></div>
+    </div>
+  </section>
+
+  <!-- RAPORT -->
+  <section id="v-raport" class="view" aria-label="Raport jakości">
+    <div class="wrap md" id="report"><div class="empty"><span class="spinner"></span></div></div>
   </section>
 </main>
+<div class="sr-only" aria-live="polite" id="live"></div>
+
 <script>
-const $ = (s) => document.querySelector(s);
-const items = [];
-let current = null, view = "fields";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const say = (t) => { $("#live").textContent = t; };
 
-fetch("/api/status").then(r => r.json()).then(s => {
-  $("#status").textContent = (s.llm ? `LLM: ${s.model}` : "LLM wyłączony (tylko reguły)") +
-    " · klasy: " + s.klasy.map(k => k.nazwa).join(", ");
-}).catch(() => $("#status").textContent = "brak połączenia z serwerem");
+const S = { status: null, classes: null, items: [], current: null, tab: "dane", filter: "all", zoom: 100, info: {}, activePath: null };
+const KIND = { odwolanie: ["ODW", "Odwołanie"], pelnomocnictwo: ["PEŁ", "Pełnomocnictwo"], przelew: ["PRZ", "Potwierdzenie przelewu"] };
+const kindOf = (k) => KIND[k] || [String(k || "?").slice(0, 3).toUpperCase(), humanize(k || "")];
+const SRC = { "reguły": "reguła", "LLM": "model językowy", "wyliczone": "wyliczone", "brak": "nie znaleziono", "ręcznie": "poprawione ręcznie" };
 
-const drop = $("#drop"), pick = $("#pick");
-drop.onclick = () => pick.click();
-pick.onchange = () => upload([...pick.files]);
-drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
-drop.ondragleave = () => drop.classList.remove("over");
-drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); upload([...e.dataTransfer.files]); };
+/* ---------- motyw ---------- */
+try { const t = localStorage.getItem("o2j-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+$("#theme").onclick = () => {
+  const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const t = dark ? "light" : "dark"; document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("o2j-theme", t); } catch (e) {}
+};
 
-document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
-  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
-  view = t.dataset.v; render();
-});
-
-async function upload(files) {
-  for (const f of files.filter(f => f.name.toLowerCase().endsWith(".pdf"))) {
-    const it = { plik: f.name, pending: true, localUrl: URL.createObjectURL(f) };
-    items.push(it); drawList(); if (!current) select(it);
-    const fd = new FormData(); fd.append("files", f);
-    try {
-      const [res] = await (await fetch("/api/extract", { method: "POST", body: fd })).json();
-      Object.assign(it, res, { pending: false });
-    } catch (e) { Object.assign(it, { pending: false, blad: String(e) }); }
-    drawList(); if (current === it) select(it);
-  }
+/* ---------- widoki ---------- */
+document.querySelectorAll("nav.views button").forEach(b => b.onclick = () => showView(b.dataset.view));
+function showView(v) {
+  document.querySelectorAll("nav.views button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current"));
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
+  if (v === "klasy") loadClasses();
+  if (v === "raport") loadReport();
 }
 
-function drawList() {
-  const ul = $("#files"); ul.innerHTML = "";
-  items.forEach(it => {
-    const li = document.createElement("li");
-    li.className = it === current ? "active" : "";
-    const cls = it.pending ? '<span class="spinner"></span> analiza…' :
-      it.blad ? `<span class="note">błąd</span>` : (it.klasa || "nierozpoznany typ — brak JSON");
-    li.innerHTML = `<div class="name">${esc(it.plik)}</div><div class="cls">${cls}</div>`;
-    li.onclick = () => select(it);
-    ul.appendChild(li);
+/* ---------- status ---------- */
+fetch("/api/status").then(r => r.json()).then(s => {
+  S.status = s;
+  $("#chips").innerHTML =
+    `<span class="chip" title="${s.llm ? "Model językowy uzupełnia pola, których nie wyznaczyły reguły" : "Ekstrakcja wyłącznie regułami (bez modelu językowego)"}"><span class="dot ${s.llm ? "on" : "off"}"></span>${s.llm ? "LLM: " + esc(s.model) : "Tryb: same reguły"}</span>` +
+    `<span class="chip" title="Rozpoznawanie tekstu na skanach"><span class="dot ${s.ocr ? "on" : "off"}"></span>OCR: ${s.ocr ? esc(s.ocr_silnik) : "wyłączony"}</span>` +
+    `<span class="chip" title="Skonfigurowane klasy dokumentów">${s.klasy.length} klasy dokumentów</span>`;
+}).catch(() => { $("#chips").innerHTML = `<span class="chip"><span class="dot off"></span>brak połączenia z serwerem</span>`; });
+
+function loadClassMeta() {
+  if (S.classes) return Promise.resolve(S.classes);
+  return fetch("/api/klasy").then(r => r.json()).then(c => (S.classes = c));
+}
+loadClassMeta().then(() => S.current && renderData());
+
+/* ---------- wczytywanie ---------- */
+$("#btnFiles").onclick = () => $("#pickFiles").click();
+$("#btnFolder").onclick = () => $("#pickFolder").click();
+$("#btnZip").onclick = () => $("#pickZip").click();
+$("#pickFiles").onchange = (e) => { intake([...e.target.files].map(f => ({ file: f, rel: f.name }))); e.target.value = ""; };
+$("#pickZip").onchange = (e) => { intake([...e.target.files].map(f => ({ file: f, rel: f.name }))); e.target.value = ""; };
+$("#pickFolder").onchange = (e) => { intake([...e.target.files].map(f => ({ file: f, rel: f.webkitRelativePath || f.name }))); e.target.value = ""; };
+
+const drop = $("#drop");
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = async (e) => {
+  e.preventDefault(); drop.classList.remove("over");
+  const entries = [...e.dataTransfer.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (!entries.length) return intake([...e.dataTransfer.files].map(f => ({ file: f, rel: f.name })));
+  const out = [];
+  await Promise.all(entries.map(en => walk(en, "", out)));
+  intake(out);
+};
+function walk(entry, prefix, out) {
+  return new Promise(res => {
+    if (entry.isFile) return entry.file(f => { out.push({ file: f, rel: prefix + f.name }); res(); }, res);
+    const reader = entry.createReader(), all = [];
+    const next = () => reader.readEntries(async batch => {
+      if (!batch.length) { await Promise.all(all.map(c => walk(c, prefix + entry.name + "/", out))); return res(); }
+      all.push(...batch); next();
+    }, res);
+    next();
   });
 }
 
+const queue = []; let running = 0, total = 0, done = 0;
+function intake(list) {
+  const ok = list.filter(x => /\.(pdf|zip)$/i.test(x.file.name));
+  const skipped = list.length - ok.length;
+  ok.forEach(x => {
+    const isZip = /\.zip$/i.test(x.file.name);
+    const parts = x.rel.split("/").filter(Boolean);
+    const it = { plik: x.file.name, sprawa: isZip ? x.file.name.replace(/\.zip$/i, "") : (parts.length > 1 ? parts[parts.length - 2] : "bez sprawy"),
+      pending: true, zip: isZip, uid: Math.random().toString(36).slice(2) };
+    S.items.push(it); queue.push({ it, x }); total++;
+  });
+  if (skipped) say(`Pominięto ${skipped} plików, które nie są PDF ani ZIP.`);
+  drawList(); if (!S.current && S.items.length) select(S.items.find(i => !i.zip) || S.items[0]);
+  pump();
+}
+function pump() {
+  progress();
+  while (running < 3 && queue.length) {
+    const { it, x } = queue.shift(); running++;
+    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel);
+    fetch("/api/extract", { method: "POST", body: fd }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(res => place(it, res))
+      .catch(e => Object.assign(it, { pending: false, blad: "Błąd połączenia: " + e.message }))
+      .finally(() => { running--; done++; drawList(); if (S.current === it || (S.current && !S.items.includes(S.current))) select(S.current && S.items.includes(S.current) ? S.current : S.items[0]); pump(); });
+  }
+}
+function place(it, res) {
+  const fresh = res.map(r => Object.assign({ uid: r.id || Math.random().toString(36).slice(2), pending: false }, r, { orig: r.json ? JSON.parse(JSON.stringify(r.json)) : null, edits: {} }));
+  const i = S.items.indexOf(it);
+  S.items.splice(i, 1, ...fresh);
+  if (S.current === it) S.current = fresh[0] || null;
+  const ok = fresh.filter(r => r.klasa).length, rej = fresh.filter(r => !r.klasa && !r.blad).length;
+  say(`Przeanalizowano ${it.plik}: ${ok ? ok + " rozpoznane" : ""}${rej ? " " + rej + " odrzucone" : ""}`);
+}
+function progress() {
+  const p = $("#progress"), busy = running + queue.length > 0;
+  p.classList.toggle("on", busy);
+  const pct = total ? Math.round(100 * done / total) : 0;
+  p.firstElementChild.style.width = pct + "%"; p.setAttribute("aria-valuenow", pct);
+  if (!busy) { total = 0; done = 0; }
+}
+
+/* ---------- lista ---------- */
+function stateOf(it) { return it.pending ? "pending" : it.blad ? "err" : it.klasa ? "ok" : "rej"; }
+function drawList() {
+  const box = $("#cases");
+  const c = { ok: 0, rej: 0, err: 0 };
+  S.items.forEach(it => { const s = stateOf(it); if (c[s] !== undefined) c[s]++; });
+  $("#cOk").textContent = c.ok; $("#cRej").textContent = c.rej; $("#cErr").textContent = c.err;
+  $("#zipAll").disabled = !(c.ok + c.rej) || running + queue.length > 0;
+  $("#clear").disabled = !S.items.length || running + queue.length > 0;
+  if (!S.items.length) { box.innerHTML = `<div class="empty" style="padding:20px 8px">Brak wczytanych dokumentów.</div>`; return; }
+  const groups = new Map();
+  S.items.forEach(it => { if (!groups.has(it.sprawa)) groups.set(it.sprawa, []); groups.get(it.sprawa).push(it); });
+  box.innerHTML = "";
+  groups.forEach((list, name) => {
+    const g = document.createElement("div"); g.className = "case"; g.setAttribute("role", "group"); g.setAttribute("aria-label", "Sprawa " + name);
+    g.innerHTML = `<div class="case-h"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>${esc(name)}<span class="n">${list.length} ${plural(list.length, "plik", "pliki", "plików")}</span></div>`;
+    list.forEach(it => {
+      const s = stateOf(it), [abbr, label] = kindOf(it.klasa);
+      const b = document.createElement("button"); b.type = "button"; b.className = "doc"; b.setAttribute("role", "listitem");
+      if (it === S.current) b.setAttribute("aria-current", "true");
+      const ic = s === "pending" ? `<span class="ic"><span class="spinner"></span></span>` :
+        s === "err" ? `<span class="ic k-err">!</span>` : s === "rej" ? `<span class="ic k-rej">{ }</span>` : `<span class="ic k-${esc(it.klasa)}">${esc(abbr)}</span>`;
+      const st = s === "pending" ? (it.zip ? "rozpakowywanie i analiza…" : "analiza…") :
+        s === "err" ? `<span style="color:var(--bad)">błąd: ${esc(it.blad).slice(0, 60)}</span>` :
+        s === "rej" ? `<span style="color:var(--warn)">nie rozpoznano · pusty JSON</span>` :
+        `${esc(label)} · <span>${confidence(it).label}</span>${Object.keys(it.edits || {}).length ? ' · <span class="badge b-ręcznie">poprawki</span>' : ""}`;
+      b.innerHTML = `${ic}<span class="nm">${esc(it.plik)}</span><span class="st">${st}</span>`;
+      b.onclick = () => select(it);
+      g.appendChild(b);
+    });
+    box.appendChild(g);
+  });
+}
+const plural = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? b : c;
+
+$("#clear").onclick = () => { S.items = []; S.current = null; drawList(); select(null); };
+
+/* ---------- pewność klasyfikacji ---------- */
+function confidence(it) {
+  const k = it.slad?.klasyfikacja; if (!k) return { level: "niska", label: "brak danych" };
+  const pts = k.punkty || {}, thr = (S.status?.klasy || []).reduce((m, c) => (m[c.nazwa] = c.prog, m), {});
+  const sorted = Object.entries(pts).sort((a, b) => b[1] - a[1]);
+  if (!k.wynik) return { level: "niska", label: "nie rozpoznano", pts, thr, sorted };
+  const best = pts[k.wynik], second = sorted.find(([n]) => n !== k.wynik)?.[1] ?? 0, t = thr[k.wynik] ?? 5;
+  const level = best >= 2 * t && best - second >= t ? "wysoka" : best - second >= t / 2 ? "średnia" : "niska";
+  return { level, label: "pewność " + level, pts, thr, sorted, best, second, t };
+}
+
+/* ---------- wybór dokumentu ---------- */
 function select(it) {
-  current = it; drawList();
-  const fr = $("#pdf"); fr.hidden = false; $("#pdfEmpty").hidden = true;
-  const src = it.localUrl || `/api/pdf/${it.id}`;
-  if (fr.dataset.src !== src) { fr.src = src; fr.dataset.src = src; }
-  $("#download").disabled = !it.json;
-  render();
+  S.current = it; S.activePath = null; drawList();
+  renderViewer(); renderData();
 }
 
-function goPage(n) {
-  if (!current || !n) return;
-  const base = current.localUrl || `/api/pdf/${current.id}`;
-  $("#pdf").src = `${base}#page=${n}`; $("#pdf").dataset.src = $("#pdf").src;
+function renderViewer() {
+  const it = S.current, box = $("#pages");
+  $("#pager").hidden = true;
+  if (!it) { $("#docTitle").textContent = "Podgląd dokumentu"; box.innerHTML = `<div class="placeholder"><h3>Tu pojawi się dokument</h3><p>Wczytaj dokumenty sprawy po lewej stronie.</p></div>`; return; }
+  $("#docTitle").textContent = it.plik;
+  if (it.pending) { box.innerHTML = `<div class="placeholder"><span class="spinner"></span><h3>Trwa analiza</h3><p>Odczyt tekstu, rozpoznanie typu dokumentu i ekstrakcja pól. Skany wymagają OCR i trwają dłużej.</p></div>`; return; }
+  if (!it.id) { box.innerHTML = `<div class="placeholder"><h3>Brak podglądu</h3><p>${esc(it.blad || "")}</p></div>`; return; }
+  if (box.dataset.id === it.id) return;
+  box.dataset.id = it.id; box.innerHTML = "";
+  $("#openPdf").href = `/api/pdf/${it.id}`;
+  const draw = (info) => {
+    if (S.current !== it) return;
+    box.innerHTML = ""; box.style.setProperty("--zoom", S.zoom);
+    info.strony.forEach((p, i) => {
+      const d = document.createElement("div"); d.className = "page"; d.id = "page-" + (i + 1);
+      d.style.aspectRatio = `${p.w} / ${p.h}`;
+      d.innerHTML = `<span class="pn">str. ${i + 1}</span><img loading="lazy" alt="Strona ${i + 1} dokumentu ${esc(it.plik)}" src="/api/strona/${it.id}/${i + 1}">`;
+      box.appendChild(d);
+    });
+    $("#pager").hidden = false; $("#pCount").textContent = `${info.strony.length} ${plural(info.strony.length, "strona", "strony", "stron")}`;
+  };
+  if (S.info[it.id]) draw(S.info[it.id]);
+  else fetch(`/api/info/${it.id}`).then(r => r.json()).then(i => { S.info[it.id] = i; draw(i); }).catch(() => { box.innerHTML = `<div class="placeholder"><h3>Nie udało się otworzyć PDF</h3></div>`; });
+}
+function setZoom(z) { S.zoom = Math.min(200, Math.max(50, z)); $("#zVal").textContent = S.zoom + "%"; $("#pages").style.setProperty("--zoom", S.zoom); }
+$("#zIn").onclick = () => setZoom(S.zoom + 20); $("#zOut").onclick = () => setZoom(S.zoom - 20);
+
+async function locate(f) {
+  const it = S.current; if (!it?.id) return;
+  document.querySelectorAll(".hl").forEach(h => h.remove());
+  const qs = [f.reguly, f.wartosc, f.llm].filter(v => v !== null && v !== undefined && typeof v !== "object").map(String);
+  if (f.cytat) { const c = f.cytat.replace(/\s+/g, " ").trim(); const mid = Math.floor(c.length / 2); qs.push(c.slice(Math.max(0, mid - 25), mid + 25).trim()); }
+  let res = { strona: f.strona, prostokaty: [] };
+  if (qs.length) {
+    const u = new URLSearchParams(); qs.forEach(q => u.append("q", q)); if (f.strona) u.set("strona", f.strona);
+    try { res = await (await fetch(`/api/szukaj/${it.id}?${u}`)).json(); } catch (e) {}
+  }
+  const n = res.strona || f.strona; const page = n && document.getElementById("page-" + n);
+  if (!page) { say("Brak położenia tej wartości w dokumencie."); return; }
+  (res.prostokaty || []).forEach(([x0, y0, x1, y1]) => {
+    const h = document.createElement("div"); h.className = "hl";
+    Object.assign(h.style, { left: (x0 * 100 - .4) + "%", top: (y0 * 100 - .3) + "%", width: ((x1 - x0) * 100 + .8) + "%", height: ((y1 - y0) * 100 + .6) + "%" });
+    page.appendChild(h);
+  });
+  const first = page.querySelector(".hl");
+  const box = $("#pages");
+  const top = page.offsetTop - box.offsetTop + (first ? first.offsetTop - box.clientHeight / 3 : -12);
+  box.scrollTo({ top: Math.max(0, top) });
+  say(res.prostokaty?.length ? `Zaznaczono wartość na stronie ${n}.` : `Strona ${n}. Dokładne położenie niedostępne (np. skan).`);
 }
 
-function render() {
-  const box = $("#result"), it = current;
-  if (!it) { box.innerHTML = '<div class="empty">Brak wyników.</div>'; return; }
-  if (it.pending) { box.innerHTML = '<div class="empty"><span class="spinner"></span> Trwa analiza dokumentu…</div>'; return; }
-  if (it.blad) { box.innerHTML = `<div class="empty note">${esc(it.blad)}</div>`; return; }
-  const t = it.slad || {};
-  const meta = `<div class="meta">Klasa: <b>${esc(it.klasa || "nierozpoznana")}</b> · stron: ${t.strony ?? "?"}` +
-    (t.ocr_strony && t.ocr_strony.length ? ` · OCR: str. ${t.ocr_strony.join(", ")}` : "") +
-    ` · LLM: ${t.llm_uzyty ? "tak" : "nie"}` + (t.llm_blad ? ` <span class="note">(${esc(t.llm_blad)})</span>` : "") +
-    ` · ${t.czas_s ?? "?"} s</div>`;
-  if (!it.json) {
-    box.innerHTML = meta + `<div class="empty">Dokument nie pasuje do żadnej skonfigurowanej klasy, więc JSON nie jest generowany.<br><br>Punktacja: ${esc(JSON.stringify(t.klasyfikacja?.punkty || {}))}</div>`;
+/* ---------- panel danych ---------- */
+const ACR = new Set(["nip", "krs", "regon", "bzp", "ted", "kio", "uzp", "swz", "pesel", "id", "iban"]);
+function humanize(s) { if (ACR.has(String(s).toLowerCase())) return String(s).toUpperCase(); s = String(s).replace(/[_-]+/g, " ").replace(/([a-ząćęłńóśźż])([A-ZĄĆĘŁŃÓŚŹŻ])/g, "$1 $2").trim(); return s.charAt(0).toUpperCase() + s.slice(1); }
+function specFor(path) {
+  const c = S.classes?.find(x => x.nazwa === S.current?.klasa); if (!c) return null;
+  const generic = path.replace(/\[\d+\]/g, "[*]");
+  return c.pola.find(p => p.sciezka === path || p.sciezka === generic);
+}
+function groupOf(path) {
+  const head = path.split(".")[0], m = head.match(/^(.*)\[(\d+)\]$/);
+  return m ? `${humanize(m[1])} ${+m[2] + 1}` : humanize(head);
+}
+function setPath(obj, path, val) {
+  const keys = path.match(/[^.[\]]+/g); let o = obj;
+  for (let i = 0; i < keys.length - 1; i++) { const k = /^\d+$/.test(keys[i]) ? +keys[i] : keys[i]; if (o[k] === undefined || o[k] === null) o[k] = /^\d+$/.test(keys[i + 1]) ? [] : {}; o = o[k]; }
+  const last = keys[keys.length - 1]; o[/^\d+$/.test(last) ? +last : last] = val;
+}
+function parseLike(text, orig) {
+  const t = text.trim(); if (t === "" || t.toLowerCase() === "null") return null;
+  if (typeof orig === "number") { const n = Number(t.replace(",", ".")); return isNaN(n) ? t : n; }
+  return t;
+}
+
+function renderData() {
+  const it = S.current, box = $("#data"), foot = $("#dataFoot");
+  foot.hidden = true;
+  if (!it) { box.innerHTML = `<div class="empty"><h3>Nie wybrano dokumentu</h3>Wczytaj dokumenty i wybierz jeden z listy po lewej.</div>`; return; }
+  if (it.pending) { box.innerHTML = `<div class="empty"><span class="spinner"></span><h3>Trwa analiza dokumentu</h3>${esc(it.plik)}</div>`; return; }
+  if (it.blad) { box.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p></div>`; return; }
+  const t = it.slad || {}, conf = confidence(it), [abbr, label] = kindOf(it.klasa);
+  const cls = S.classes?.find(c => c.nazwa === it.klasa);
+  const maxPts = Math.max(1, ...Object.values(conf.pts || {}), ...Object.values(conf.thr || {}).map(x => x * 2));
+  const bars = (conf.sorted || []).map(([n, v]) => {
+    const thr = conf.thr?.[n] ?? 5;
+    return `<div class="bar ${n === it.klasa ? "win" : ""}"><span>${esc(kindOf(n)[1])}</span><span class="track" role="img" aria-label="${esc(kindOf(n)[1])}: ${v} pkt, próg ${thr}"><span class="fill" style="width:${Math.max(0, v) / maxPts * 100}%"></span><span class="thr" style="left:${thr / maxPts * 100}%" title="próg ${thr} pkt"></span></span><span class="v">${v} pkt</span></div>`;
+  }).join("");
+  const hits = (t.klasyfikacja?.trafienia || []).map(h => `<li><code>${esc(h)}</code></li>`).join("");
+  const facts = `<div class="facts"><span>Strony: <b>${t.strony ?? "?"}</b></span>` +
+    `<span>OCR: <b>${t.ocr_strony?.length ? "str. " + t.ocr_strony.join(", ") + (t.ocr_silnik ? " (" + esc(t.ocr_silnik) + ")" : "") : "niepotrzebny"}</b></span>` +
+    `<span>LLM: <b>${t.llm_uzyty ? "użyty" : "nie"}</b>${t.llm_blad ? ` <span style="color:var(--bad)">(${esc(t.llm_blad)})</span>` : ""}</span>` +
+    `<span>Czas: <b>${t.czas_s ?? "?"} s</b></span></div>` +
+    (t.ostrzezenia?.length ? `<div class="note">${t.ostrzezenia.map(esc).join("<br>")}</div>` : "");
+
+  if (!it.klasa) {
+    box.innerHTML = `<div class="alert warn"><h3>Dokument nie został rozpoznany</h3>
+      <p>Treść nie pasuje do żadnej skonfigurowanej klasy (żadna nie przekroczyła progu punktów). Może to być inny dokument z akt albo podróbka.</p>
+      <p>Zgodnie z wymaganiami wynikiem jest pusty plik JSON: <code>${esc(S.status?.pusty_json ?? "{}")}</code></p></div>
+      <div class="card"><div class="card-b"><b>Punkty dopasowania do klas</b><div class="bars">${bars}</div>${facts}</div></div>`;
+    foot.hidden = false; $("#revert").hidden = true; $("#editHint").textContent = "";
+    $("#download").textContent = "Pobierz pusty JSON";
     return;
   }
-  if (view === "json") { box.innerHTML = meta + `<pre>${esc(JSON.stringify(it.json, null, 2))}</pre>`; return; }
-  if (view === "trace") { box.innerHTML = meta + `<pre>${esc(JSON.stringify(t, null, 2))}</pre>`; return; }
-  const rows = Object.entries(t.pola || {}).map(([path, f]) => {
-    const v = f.wartosc, isNull = v === null || v === undefined;
-    const src = f.zrodlo || "brak";
-    const ev = f.cytat ? `<div class="ev">${f.strona ? `str. ${f.strona}: ` : ""}„${highlight(f.cytat, v)}”</div>` : "";
-    const notes = (f.uwagi || []).map(n => `<div class="note">${esc(n)}</div>`).join("");
-    return `<tr class="row" data-page="${f.strona || ""}"><td class="path">${esc(path)}</td>` +
-      `<td class="val ${isNull ? "null" : ""}">${isNull ? "null" : esc(String(v))}<span class="badge b-${src}">${src}</span>${ev}${notes}</td></tr>`;
-  }).join("");
-  box.innerHTML = meta + `<table>${rows}</table>`;
-  box.querySelectorAll("tr.row").forEach(r => r.onclick = () => goPage(+r.dataset.page));
+  const head = `<div class="card"><div class="card-b">
+    <div class="kind"><span class="ic k-${esc(it.klasa)}">${esc(abbr)}</span><div><h3>${esc(label)}</h3><p>${esc(cls?.opis || "")}</p></div>
+      <div class="conf c-${conf.level === "średnia" ? "srednia" : conf.level}"><b>Pewność ${conf.level}</b>${conf.best} pkt (próg ${conf.t})</div></div>
+    <div class="bars">${bars}</div>
+    ${hits ? `<details><summary>Dlaczego ta klasa?</summary><ul>${hits}</ul></details>` : ""}
+    ${facts}</div></div>`;
+  const tabs = `<div class="tabs" role="tablist">${[["dane", "Dane"], ["json", "JSON"], ["slad", "Ślad techniczny"]].map(([k, l]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" data-tab="${k}">${l}</button>`).join("")}</div>`;
+  let body = "";
+  if (S.tab === "json") body = `<pre aria-label="Wynikowy JSON">${esc(JSON.stringify(it.json, null, 2))}</pre>`;
+  else if (S.tab === "slad") body = `<pre aria-label="Ślad ekstrakcji">${esc(JSON.stringify(t, null, 2))}</pre>`;
+  else body = fieldsHtml(it);
+  box.innerHTML = head + tabs + body;
+  box.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderData(); });
+  box.querySelectorAll("[data-filter]").forEach(b => b.onclick = () => { S.filter = b.dataset.filter; renderData(); });
+  bindFields(it);
+  const n = Object.keys(it.edits).length;
+  foot.hidden = false; $("#download").textContent = "Pobierz JSON";
+  $("#revert").hidden = !n; $("#editHint").textContent = n ? `${n} ${plural(n, "pole poprawione", "pola poprawione", "pól poprawionych")} ręcznie` : "Wartości można poprawić przed pobraniem.";
 }
 
+function fieldsHtml(it) {
+  const pola = it.slad?.pola || {};
+  const entries = Object.entries(pola).filter(([p, f]) => {
+    const v = p in it.edits ? it.edits[p] : f.wartosc;
+    if (S.filter === "empty") return v === null || v === undefined;
+    if (S.filter === "check") return v === null || v === undefined || f.zrodlo === "LLM" || (f.uwagi || []).length;
+    return true;
+  });
+  const cnt = (fn) => Object.entries(pola).filter(fn).length;
+  const filter = `<div class="filter"><span>Pokaż:</span><span class="seg" role="group" aria-label="Filtr pól">` +
+    [["all", `wszystkie (${Object.keys(pola).length})`], ["check", `do sprawdzenia (${cnt(([p, f]) => f.wartosc == null || f.zrodlo === "LLM" || (f.uwagi || []).length)})`], ["empty", `puste (${cnt(([p, f]) => f.wartosc == null)})`]]
+      .map(([k, l]) => `<button type="button" data-filter="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("") + `</span></div>`;
+  const groups = new Map();
+  entries.forEach(([p, f]) => { const g = groupOf(p); if (!groups.has(g)) groups.set(g, []); groups.get(g).push([p, f]); });
+  let html = filter;
+  groups.forEach((list, g) => {
+    html += `<div class="group"><h4>${esc(g)}</h4>`;
+    list.forEach(([p, f]) => {
+      const edited = p in it.edits, v = edited ? it.edits[p] : f.wartosc, isNull = v === null || v === undefined;
+      const src = edited ? "ręcznie" : (f.zrodlo || "brak"), spec = specFor(p);
+      const name = humanize(p.split(".").pop().replace(/\[\d+\]/, "")), id = "f-" + btoa(unescape(encodeURIComponent(p))).replace(/[^a-z0-9]/gi, "");
+      const ev = f.cytat ? `<div class="ev">${f.strona ? `str. ${f.strona}: ` : ""}„${highlight(f.cytat, f.reguly ?? f.wartosc)}”</div>` : "";
+      const notes = (f.uwagi || []).map(n => `<div class="note">${esc(n)}</div>`).join("");
+      html += `<div class="field ${S.activePath === p ? "active" : ""}" data-path="${esc(p)}">
+        <div class="top"><label for="${id}" title="${esc(spec?.opis || "")}">${esc(name)}</label><span class="path">${esc(p)}</span>
+          <span class="r"><span class="badge b-${esc(src)}" title="Źródło: ${esc(SRC[src] || src)}">${esc(src)}</span>${f.strona || f.cytat ? `<button type="button" class="pg" data-loc="${esc(p)}" aria-label="Pokaż w dokumencie">${f.strona ? "str. " + f.strona : "pokaż"}</button>` : ""}</span></div>
+        <input id="${id}" class="${isNull ? "null" : ""}" value="${isNull ? "" : esc(v)}" placeholder="brak w dokumencie (null)" data-edit="${esc(p)}" autocomplete="off" spellcheck="false" ${spec?.opis ? `aria-description="${esc(spec.opis)}"` : ""}>
+        ${ev}${notes}</div>`;
+    });
+    html += `</div>`;
+  });
+  if (!entries.length) html += `<div class="empty">Brak pól spełniających filtr.</div>`;
+  return html + `<div style="height:14px"></div>`;
+}
+
+function bindFields(it) {
+  const pola = it.slad?.pola || {};
+  document.querySelectorAll("#data .field").forEach(el => {
+    const p = el.dataset.path;
+    el.addEventListener("click", (e) => { if (e.target.tagName === "INPUT") return; activate(el, p); locate(pola[p]); });
+  });
+  document.querySelectorAll("#data [data-edit]").forEach(inp => {
+    const p = inp.dataset.edit;
+    inp.addEventListener("focus", () => { activate(inp.closest(".field"), p); locate(pola[p]); });
+    inp.addEventListener("change", () => {
+      const f = pola[p], val = parseLike(inp.value, f.wartosc);
+      if (JSON.stringify(val) === JSON.stringify(f.wartosc)) delete it.edits[p]; else it.edits[p] = val;
+      it.json = JSON.parse(JSON.stringify(it.orig));
+      Object.entries(it.edits).forEach(([k, v]) => setPath(it.json, k, v));
+      renderData(); drawList();
+      say(p in it.edits ? `Poprawiono pole ${p}.` : `Przywrócono wartość pola ${p}.`);
+    });
+  });
+}
+function activate(el, p) { S.activePath = p; document.querySelectorAll("#data .field.active").forEach(x => x.classList.remove("active")); el?.classList.add("active"); }
 function highlight(text, v) {
-  const s = esc(text);
-  if (v === null || v === undefined) return s;
-  const needle = esc(String(v));
-  const i = s.toLowerCase().indexOf(needle.toLowerCase());
+  const s = esc(text); if (v === null || v === undefined) return s;
+  const needle = esc(String(v)), i = s.toLowerCase().indexOf(needle.toLowerCase());
   return i < 0 ? s : s.slice(0, i) + "<mark>" + s.slice(i, i + needle.length) + "</mark>" + s.slice(i + needle.length);
 }
 
-function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+$("#revert").onclick = () => { const it = S.current; if (!it) return; it.edits = {}; it.json = JSON.parse(JSON.stringify(it.orig)); renderData(); drawList(); say("Cofnięto poprawki."); };
 
-$("#download").onclick = () => {
-  if (!current?.json) return;
-  const blob = new Blob([JSON.stringify(current.json, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = current.plik.replace(/\.pdf$/i, ".json"); a.click();
+/* ---------- pobieranie ---------- */
+const outName = (it) => it.plik.replace(/\.pdf$/i, "") + ".json";
+const outBody = (it) => it.klasa ? JSON.stringify(it.json, null, 2) : (S.status?.pusty_json ?? "{}");
+function save(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+$("#download").onclick = () => { const it = S.current; if (it && !it.blad && !it.pending) save(new Blob([outBody(it)], { type: "application/json" }), outName(it)); };
+$("#zipAll").onclick = async () => {
+  const pliki = S.items.filter(it => !it.pending && !it.blad).map(it => ({ sciezka: (it.sprawa && it.sprawa !== "bez sprawy" ? it.sprawa + "/" : "") + outName(it), json: it.klasa ? it.json : (S.status?.pusty_json ?? "{}") }));
+  const b = $("#zipAll"); b.disabled = true; const old = b.textContent; b.textContent = "Przygotowanie…";
+  try {
+    const r = await fetch("/api/zip", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pliki }) });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    save(await r.blob(), "wyniki_odwolania2json.zip"); say(`Pobrano ${pliki.length} plików JSON w archiwum ZIP.`);
+  } catch (e) { say("Nie udało się przygotować archiwum: " + e.message); }
+  b.textContent = old; drawList();
 };
+
+/* ---------- klasy ---------- */
+function loadClasses() {
+  loadClassMeta().then(list => {
+    $("#clsGrid").innerHTML = list.map(c => {
+      const [abbr, label] = kindOf(c.nazwa);
+      const rows = c.pola.map(p => `<tr><td class="mono">${esc(p.sciezka)}</td><td>${esc(p.typ)}</td><td>${esc(p.zrodlo)}${p.reguly ? ` · ${p.reguly} ${plural(p.reguly, "reguła", "reguły", "reguł")}` : ""}</td></tr>`).join("");
+      return `<article class="cls-card"><h3><span class="ic k-${esc(c.nazwa)}" style="width:30px;height:36px;border-radius:4px;display:grid;place-items:center;font-size:10.5px;font-weight:800;border:1px solid">${esc(abbr)}</span>${esc(label)}</h3>
+        <p>${esc(c.opis)}</p>
+        <div class="kv"><span>Plik: <b><code>${esc(c.plik)}</code></b></span><span>Pola: <b>${c.pola.length}</b></span><span>Próg klasyfikacji: <b>${c.prog} pkt</b></span><span>Słowa kluczowe: <b>${c.slowa_kluczowe}</b></span><span>Wykluczenia: <b>${c.wykluczenia}</b></span></div>
+        <details><summary>Pola i źródła wartości</summary><table><thead><tr><th>Ścieżka w JSON</th><th>Typ</th><th>Źródło</th></tr></thead><tbody>${rows}</tbody></table></details>
+        <details><summary>Szablon wynikowego JSON</summary><pre style="margin:8px 0 0">${esc(JSON.stringify(c.szablon, null, 2))}</pre></details></article>`;
+    }).join("");
+  }).catch(() => { $("#clsGrid").innerHTML = `<div class="alert bad">Nie udało się wczytać konfiguracji klas.</div>`; });
+}
+
+/* ---------- raport ---------- */
+function loadReport() {
+  fetch("/api/raport").then(r => r.json()).then(r => {
+    $("#report").innerHTML = r.jest ? md(r.tekst) :
+      `<h2>Raport jakości</h2><p class="lead">Raport jeszcze nie powstał. Uruchom ocenę na danych treningowych:</p><pre>python -m odw2json eval --gt &lt;hacknation-2026&gt;/dane --no-llm</pre><p class="lead">Wynik (F1 dla każdego pola i klasy) pojawi się tutaj po odświeżeniu.</p>`;
+  });
+}
+function md(src) {
+  const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+  const lines = src.split(/\r?\n/); let out = "", i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^\s*\|/.test(l)) {
+      const rows = []; while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const body = rows.filter((r, k) => !(k === 1 && /^[\s|:-]+$/.test(r)));
+      out += `<div class="tw"><table><thead><tr>${cells(body[0]).map(c => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${body.slice(1).map(r => `<tr>${cells(r).map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+      continue;
+    }
+    const h = l.match(/^(#{1,4})\s+(.*)/);
+    if (h) out += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`;
+    else if (/^\s*[-*]\s+/.test(l)) { out += "<ul>"; while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) out += `<li>${inline(lines[i++].replace(/^\s*[-*]\s+/, ""))}</li>`; out += "</ul>"; continue; }
+    else if (l.trim()) out += `<p>${inline(l)}</p>`;
+    i++;
+  }
+  return out;
+}
 </script>
 </body>
 </html>
