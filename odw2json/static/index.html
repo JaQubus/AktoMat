@@ -148,6 +148,22 @@
   .sesslist td .acts { display: flex; gap: 6px; justify-content: flex-end; }
   .sesslist tr.cur td:first-child b::after { content: "bieżąca"; margin-left: 8px; font-size: 11.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
 
+  /* ---------- okna i powiadomienia ---------- */
+  .dlg .lbl { font-size: 13px; color: var(--muted); margin-bottom: -6px; }
+  .dlg textarea { min-height: 84px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 6px; padding: 10px 12px; font: inherit; font-size: 15px; background: var(--panel); color: var(--ink); }
+  .dlg .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+  :root[data-theme="dark"] .dlg .btn.danger { color: #2a0d09; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlg .btn.danger { color: #2a0d09; } }
+  #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 1100; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; max-width: calc(100vw - 32px); }
+  .toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 10px; min-width: 240px; max-width: 420px; background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-left: 4px solid var(--accent); border-radius: 8px; padding: 10px 10px 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 14px; animation: tIn .18s ease-out; }
+  .toast.bad { border-left-color: var(--bad); } .toast.warn { border-left-color: var(--warn); } .toast.ok { border-left-color: var(--ok); }
+  .toast .tx { flex: 1; padding-top: 2px; }
+  .toast button { border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+  .toast button:hover { background: var(--panel-2); color: var(--ink); }
+  .toast.out { opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; }
+  @keyframes tIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } .toast.out { transition: none; } }
+
   /* ---------- kalendarz ---------- */
   .dp-wrap { position: relative; display: block; }
   .dp-wrap > input { padding-right: 44px !important; width: 100%; box-sizing: border-box; }
@@ -349,6 +365,16 @@
 <input type="file" id="pickFolder" webkitdirectory directory multiple hidden>
 <input type="file" id="pickZip" accept=".zip,application/zip" multiple hidden>
 <div class="sr-only" aria-live="polite" id="live"></div>
+<div id="toasts" aria-hidden="true"></div>
+<dialog class="dlg" id="askDlg" aria-labelledby="askH">
+  <form method="dialog" id="askForm">
+    <h2 id="askH"></h2>
+    <p id="askT"></p>
+    <label class="lbl" for="askIn" id="askL" hidden></label>
+    <textarea id="askIn" hidden></textarea>
+    <div class="row"><button class="btn" type="button" id="askNo">Anuluj</button><button class="btn primary" type="submit" id="askOk">OK</button></div>
+  </form>
+</dialog>
 <dialog class="dlg" id="whoDlg" aria-labelledby="whoH">
   <form method="dialog" id="whoForm">
     <h2 id="whoH">Kto pracuje nad sprawami?</h2>
@@ -364,7 +390,40 @@
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const say = (t) => { $("#live").textContent = t; };
+/* Komunikat: czytnik ekranu + powiadomienie w rogu ekranu (zamiast alert). */
+function say(t, kind) {
+  $("#live").textContent = t;
+  if (!t) return;
+  kind = kind || (/^(Nie udało|Błąd)/.test(t) ? "bad" : /^Pominięto pliki|Pominięto \d/.test(t) ? "warn" : "");
+  const box = $("#toasts"); if (!box) return;
+  while (box.children.length >= 4) box.firstElementChild.remove();
+  const el = document.createElement("div"); el.className = "toast " + kind;
+  el.innerHTML = `<span class="tx"></span><button type="button" aria-label="Zamknij">×</button>`;
+  el.firstElementChild.textContent = t; box.appendChild(el);
+  const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 220); };
+  el.lastElementChild.onclick = close;
+  let timer = setTimeout(close, kind === "bad" ? 8000 : 4000);
+  el.onmouseenter = () => clearTimeout(timer); el.onmouseleave = () => { timer = setTimeout(close, 2500); };
+}
+/* Okno pytania w stylu aplikacji (zamiast confirm/prompt). Zwraca tekst (z polem), true (bez pola) albo null. */
+function ask({ title, text = "", input = null, ok = "OK", cancel = "Anuluj", danger = false }) {
+  return new Promise((resolve) => {
+    const d = $("#askDlg"), inp = $("#askIn"), lbl = $("#askL");
+    $("#askH").textContent = title; $("#askT").textContent = text; $("#askT").hidden = !text;
+    inp.hidden = lbl.hidden = !input;
+    if (input) { lbl.textContent = input.label || ""; inp.placeholder = input.placeholder || ""; inp.value = input.value || ""; inp.rows = input.rows || 3; }
+    $("#askOk").textContent = ok; $("#askNo").textContent = cancel;
+    $("#askOk").classList.toggle("danger", danger); $("#askOk").classList.toggle("primary", !danger);
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; d.close(); resolve(v); };
+    $("#askForm").onsubmit = (e) => { e.preventDefault(); finish(input ? inp.value : true); };
+    $("#askNo").onclick = () => finish(null);
+    d.oncancel = (e) => { e.preventDefault(); finish(null); };
+    inp.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey && (input?.rows || 3) === 1) { e.preventDefault(); finish(inp.value); } if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); finish(inp.value); } };
+    d.showModal();
+    setTimeout(() => (input ? (inp.focus(), inp.select()) : (danger ? $("#askNo") : $("#askOk")).focus()), 20);
+  });
+}
 const plural = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? b : c;
 const clone = (o) => o == null ? o : JSON.parse(JSON.stringify(o));
 const fold = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").toLowerCase();
@@ -545,8 +604,9 @@ function newSession() {
   try { localStorage.removeItem("aktomat-sid"); } catch (e) {}
   sessState(); loadSessions().then(() => go("start"));
 }
-$("#sess").onclick = () => {
-  const v = window.prompt("Nazwa sesji:", S.sname); if (v === null || !v.trim()) return;
+$("#sess").onclick = async () => {
+  const v = await ask({ title: "Nazwa sesji", text: "Nazwa pojawia się na liście zapisanych sesji.", input: { label: "Nazwa", value: S.sname, rows: 1 }, ok: "Zapisz" });
+  if (v === null || !v.trim()) return;
   S.sname = v.trim(); sessState(); markDirty();
 };
 function sessionsHtml() {
@@ -562,7 +622,7 @@ function bindSessions() {
   $$("[data-open]").forEach(b => b.onclick = () => openSession(b.dataset.open));
   $$("[data-del]").forEach(b => b.onclick = async () => {
     const x = S.sessions.find(s => s.id === b.dataset.del);
-    if (!window.confirm(`Usunąć sesję „${x?.nazwa}” razem z wczytanymi plikami PDF? Tego nie da się cofnąć.`)) return;
+    if (!await ask({ title: "Usunąć sesję?", text: `Sesja „${x?.nazwa}” zostanie usunięta razem z wczytanymi plikami PDF, poprawkami i dziennikiem. Tego nie da się cofnąć.`, ok: "Usuń sesję", danger: true })) return;
     await fetch(`/api/sesje/${b.dataset.del}`, { method: "DELETE" });
     if (b.dataset.del === S.sid) return newSession();
     await loadSessions(); render();
@@ -605,7 +665,7 @@ function renderStart() {
     ${sessionsHtml()}
   </div>`;
   bindSessions();
-  $$("[data-pick]").forEach(b => b.onclick = () => $("#" + b.dataset.pick).click());
+  $$("[data-pick]").forEach(b => b.onclick = () => { S.addTo = null; S.replaceItem = null; $("#" + b.dataset.pick).click(); });
   $$("tr[data-case]").forEach(r => r.onclick = () => go("sprawa", { caseName: r.dataset.case }));
   const drop = $("#drop");
   drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
@@ -639,7 +699,10 @@ const queue = []; let running = 0, total = 0, done = 0, firstCase = null;
 function intake(list) {
   const ok = list.filter(x => /\.(pdf|zip)$/i.test(x.file.name));
   if (list.length - ok.length) say(`Pominięto ${list.length - ok.length} plików, które nie są PDF ani ZIP.`);
+  const addTo = S.addTo, replace = S.replaceItem; S.addTo = null; S.replaceItem = null;
+  if (replace && ok.length) { const i = S.items.indexOf(replace); if (i >= 0) S.items.splice(i, 1); }
   ok.forEach(x => {
+    if (addTo && !/\.zip$/i.test(x.file.name)) x = { ...x, rel: `${addTo}/${x.file.name}` };
     const isZip = /\.zip$/i.test(x.file.name), parts = x.rel.split("/").filter(Boolean);
     const it = { plik: x.file.name, sprawa: isZip ? x.file.name.replace(/\.zip$/i, "") : (parts.length > 1 ? parts[parts.length - 2] : "bez sprawy"), pending: true, zip: isZip, edits: {}, ok: {} };
     S.items.push(it); queue.push({ it, x }); total++;
@@ -647,14 +710,39 @@ function intake(list) {
   });
   drawNav(); render(); pump();
 }
+// Zerwane połączenie (np. restart serwera): do 3 prób z odstępem 2 s i 5 s, zanim dokument dostanie błąd.
+async function postExtract(x, tries = 3) {
+  for (let i = 0; ; i++) {
+    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel);
+    try {
+      const r = await fetch("/api/extract", { method: "POST", body: fd });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } catch (e) {
+      if (!(e instanceof TypeError) || i >= tries - 1) throw e;
+      await new Promise(res => setTimeout(res, i ? 5000 : 2000));
+    }
+  }
+}
+function retryItem(it) {
+  if (!it._retry) return;
+  Object.assign(it, { pending: true, blad: null }); queue.push({ it, x: it._retry }); total++;
+  drawNav(); render(); pump();
+}
+function removeItem(it) {
+  const i = S.items.indexOf(it); if (i < 0) return;
+  S.items.splice(i, 1);
+  logEntry(it, "(dokument)", "usunięto z teczki", it.plik, null);
+  recheck(it.sprawa); drawNav();
+  go(caseItems(it.sprawa).length ? "sprawa" : "start", { caseName: it.sprawa });
+}
 function pump() {
   progress();
   while (running < 3 && queue.length) {
     const { it, x } = queue.shift(); running++;
-    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel);
-    fetch("/api/extract", { method: "POST", body: fd }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    postExtract(x)
       .then(res => place(it, res))
-      .catch(e => Object.assign(it, { pending: false, blad: "Błąd połączenia: " + e.message }))
+      .catch(e => Object.assign(it, { pending: false, blad: "Błąd połączenia z serwerem AktoMat: " + e.message, _retry: x }))
       .finally(() => {
         running--; done++; progress();
         const finished = running + queue.length === 0;
@@ -716,10 +804,11 @@ function applySkips(name) {
 function findCheck(name, key) { const ch = S.checks[name]; return ch && [...ch.wymagane, ...ch.pola, ...ch.zgodnosc].find(x => x.klucz === key); }
 function skipLog(name, x, akcja, na) { S.log.push({ czas: new Date().toISOString(), kto: S.who || "", sprawa: name, plik: "(kontrola formalna)", pole: x.opis, akcja, z: null, na: na ?? null }); }
 function bindSkips(name) {
-  $$("[data-skip]").forEach(b => b.onclick = (e) => {
+  $$("[data-skip]").forEach(b => b.onclick = async (e) => {
     e.stopPropagation();
     const x = findCheck(name, b.dataset.skip); if (!x) return;
-    const powod = window.prompt(`Pominąć „${x.opis}”?\nUzasadnienie (opcjonalnie), np. „wpis uiszczony, potwierdzenie w systemie finansowym”:`, "");
+    const powod = await ask({ title: `Pominąć „${x.opis}”?`, text: "Pozycja przestanie liczyć się jako brak. Uzasadnienie trafi do dziennika zmian i raportu kontroli.",
+      input: { label: "Uzasadnienie (opcjonalnie)", placeholder: "np. wpis uiszczony, potwierdzenie w systemie finansowym" }, ok: "Pomiń" });
     if (powod === null) return;
     (S.skip[name] ||= {})[x.klucz] = { powod: powod.trim(), kto: S.who || "", czas: new Date().toISOString() };
     skipLog(name, x, "pominięto brak", powod.trim() || null);
@@ -791,7 +880,7 @@ function renderCase() {
     </div>
   </div>`;
   $$("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
-  $$("[data-pick]").forEach(b => b.onclick = () => $("#" + b.dataset.pick).click());
+  $$("[data-pick]").forEach(b => b.onclick = () => { S.addTo = name; S.replaceItem = null; $("#" + b.dataset.pick).click(); });
   $$("tr[data-doc]").forEach(r => { const open = () => go("dokument", { item: its[+r.dataset.doc] }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
   $$("a[data-case]").forEach(a => a.onclick = (e) => { e.preventDefault(); go("sprawa", { caseName: a.dataset.case }); });
   $("#zipCase").onclick = () => downloadZip(its, `aktomat_${name}.zip`);
@@ -885,7 +974,15 @@ function renderPanel() {
 function renderPanelInner() {
   const it = S.current, p = $("#panel");
   if (it.pending) { p.innerHTML = `<div class="empty"><span class="spinner"></span><h3>Trwa analiza dokumentu</h3></div>`; return; }
-  if (it.blad) { p.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p></div>`; return; }
+  if (it.blad) {
+    p.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p>
+      <p style="margin-top:8px">${it._retry ? "Najczęściej to chwilowa przerwa w działaniu serwera. Spróbuj ponownie." : "Plik nie został zapisany w sesji. Wczytaj go jeszcze raz albo usuń tę pozycję z teczki."}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${it._retry ? '<button class="btn primary" type="button" id="retry">Spróbuj ponownie</button>' : '<button class="btn primary" type="button" data-pick="pickFiles">Wczytaj plik ponownie</button>'}<button class="btn" type="button" id="rmItem">Usuń z teczki</button></div></div>`;
+    $("#retry") && ($("#retry").onclick = () => retryItem(it));
+    $("#rmItem").onclick = () => removeItem(it);
+    $$("#panel [data-pick]").forEach(b => b.onclick = () => { S.addTo = it.sprawa; S.replaceItem = it; $("#" + b.dataset.pick).click(); });
+    return;
+  }
   const t = it.slad || {}, conf = confidence(it), c = counts(it);
   const maxPts = Math.max(1, ...Object.values(conf.pts || {}), ...Object.values(conf.thr || {}).map(x => x * 2));
   const bars = (conf.sorted || []).map(([n, v]) => { const thr = conf.thr?.[n] ?? 5; return `<div class="bar ${n === it.klasa ? "win" : ""}"><span>${esc(kindLabel(n))}</span><span class="track" role="img" aria-label="${esc(kindLabel(n))}: ${v} pkt, próg ${thr}"><span class="fill" style="width:${Math.max(0, v) / maxPts * 100}%"></span><span class="thr" style="left:${thr / maxPts * 100}%"></span></span><span class="v">${v} pkt</span></div>`; }).join("");
