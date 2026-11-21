@@ -3,6 +3,8 @@
 name: przelew
 description: Potwierdzenie wykonania przelewu bankowego (np. wpis od odwołania, opłata skarbowa)
 enabled: true
+# Domyślne źródło wartości pól: reguły (zweryfikowane), LLM uzupełnia braki. Pole może nadpisać prefer: llm.
+prefer: rules
 
 classify:
   min_score: 5

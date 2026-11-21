@@ -5,6 +5,8 @@
 name: odwolanie
 description: Odwołanie wykonawcy do Prezesa Krajowej Izby Odwoławczej (KIO) od czynności zamawiającego
 enabled: true
+# Domyślne źródło wartości pól: reguły (zweryfikowane), LLM uzupełnia braki. Pole może nadpisać prefer: llm.
+prefer: rules
 
 # --- Klasyfikacja: suma wag trafionych wzorców (bez wielkości liter i polskich znaków) ---
 classify:

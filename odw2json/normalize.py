@@ -224,8 +224,9 @@ def grounded(value, typ: str, text: str, folded: str | None = None, dig: str | N
         return True
     if fv in folded:
         return True
-    if typ == "email":
-        return False
+    if typ in ("email", "refno"):
+        # identyfikator: tylko dosłowne wystąpienie (spacje wokół separatorów pomijamy), bez dopasowania rozmytego
+        return typ == "refno" and fv in re.sub(r"\s*([./\-])\s*", r"\1", folded)
     if typ == "person":
         # odmiana nazwisk (mianownik vs. dopełniacz): wystarczy, że rdzeń każdego słowa jest w tekście
         toks = [t for t in re.split(r"[\s-]+", fv) if len(t) > 1]

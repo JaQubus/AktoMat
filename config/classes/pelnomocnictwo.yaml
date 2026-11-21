@@ -2,6 +2,8 @@
 name: pelnomocnictwo
 description: Pełnomocnictwo udzielone przez wykonawcę (mocodawcę) pełnomocnikom do działania przed KIO
 enabled: true
+# Domyślne źródło wartości pól: reguły (zweryfikowane), LLM uzupełnia braki. Pole może nadpisać prefer: llm.
+prefer: rules
 
 classify:
   min_score: 5

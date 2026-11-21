@@ -29,7 +29,7 @@ class FieldSpec:
     type: str = "string"
     description: str = ""
     rules: list = field(default_factory=list)
-    prefer: str = "llm"            # llm | rules
+    prefer: str | None = None      # llm | rules; brak = `prefer` klasy (domyślnie llm)
     derive: dict | None = None     # pole wyliczane z innych pól
     require_grounding: bool = True  # wartość musi występować w tekście
     default: object = None
@@ -90,6 +90,8 @@ def load_classes(classes_dir: Path | None = None) -> list[DocClass]:
         if not raw or raw.get("enabled", True) is False:
             continue
         fields = [FieldSpec(**f) for f in raw.get("fields", [])]
+        for f in fields:
+            f.prefer = f.prefer or raw.get("prefer", "llm")
         tpl = raw["output_template"]
         out.append(DocClass(
             name=raw["name"],
