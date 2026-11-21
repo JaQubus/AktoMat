@@ -127,6 +127,8 @@
   .checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
   .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; }
   .checks .ico { font-weight: 800; text-align: center; }
+  .checks .skipbtn { margin-left: 8px; vertical-align: 1px; }
+  .checks li.skipped > span:last-child > span:first-of-type, .skipped-row td:first-child { color: var(--muted); }
   .checks small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; word-break: break-word; }
   .banner { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 9px 14px; font-weight: 600; font-size: 14px; border: 1px solid; }
   .banner.bad { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
@@ -299,7 +301,7 @@ const fmtDate = (iso) => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(
 const S = {
   status: null, classes: null, rules: null,
   items: [], view: "start", caseName: null, current: null,
-  checks: {}, log: [], q: "",
+  checks: {}, checksRaw: {}, skip: {}, log: [], q: "",
   filter: "todo", tab: "dane", zoom: 100, info: {}, activePath: null, termDays: {},
   who: (() => { try { return localStorage.getItem("aktomat-who") || ""; } catch (e) { return ""; } })(),
 };
@@ -500,7 +502,7 @@ function recheck(name, delay = 0) {
     const dokumenty = caseItems(name).filter(i => !i.pending && !i.blad).map(i => ({ plik: i.plik, klasa: i.klasa, json: i.json }));
     try {
       const r = await fetch("/api/kontrola", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ dokumenty, dni: S.termDays }) });
-      S.checks[name] = await r.json();
+      S.checksRaw[name] = await r.json(); applySkips(name);
     } catch (e) { return; }
     drawNav();
     if (S.caseName === name || S.view === "start" || S.view === "kolejka") {
@@ -509,14 +511,59 @@ function recheck(name, delay = 0) {
   }, delay);
 }
 
+/* Pominięcie braku przez referenta: wynik "pominiete", z uzasadnieniem; liczniki bez tej pozycji. */
+const SKIPPABLE = ["brak", "niezgodne", "ostrzezenie"];
+function applySkips(name) {
+  const raw = S.checksRaw[name]; if (!raw) return;
+  const ch = JSON.parse(JSON.stringify(raw)), sk = S.skip[name] || {};
+  for (const kind of ["wymagane", "pola", "zgodnosc"]) ch[kind].forEach(x => {
+    x.klucz = kind + ":" + x.id;
+    const k = sk[x.klucz];
+    if (k && SKIPPABLE.includes(x.wynik)) Object.assign(x, { wynik_pierwotny: x.wynik, wynik: "pominiete", pominiecie: k });
+  });
+  const all = [...ch.wymagane, ...ch.pola, ...ch.zgodnosc];
+  ch.podsumowanie.braki = all.filter(x => ["brak", "niezgodne"].includes(x.wynik)).length;
+  ch.podsumowanie.ostrzezenia = all.filter(x => x.wynik === "ostrzezenie").length;
+  ch.podsumowanie.pominiete = all.filter(x => x.wynik === "pominiete").length;
+  S.checks[name] = ch;
+}
+function findCheck(name, key) { const ch = S.checks[name]; return ch && [...ch.wymagane, ...ch.pola, ...ch.zgodnosc].find(x => x.klucz === key); }
+function skipLog(name, x, akcja, na) { S.log.push({ czas: new Date().toISOString(), kto: S.who || "", sprawa: name, plik: "(kontrola formalna)", pole: x.opis, akcja, z: null, na: na ?? null }); }
+function bindSkips(name) {
+  $$("[data-skip]").forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const x = findCheck(name, b.dataset.skip); if (!x) return;
+    const powod = window.prompt(`Pominąć „${x.opis}”?\nUzasadnienie (opcjonalnie), np. „wpis uiszczony, potwierdzenie w systemie finansowym”:`, "");
+    if (powod === null) return;
+    (S.skip[name] ||= {})[x.klucz] = { powod: powod.trim(), kto: S.who || "", czas: new Date().toISOString() };
+    skipLog(name, x, "pominięto brak", powod.trim() || null);
+    applySkips(name); say(`Pominięto: ${x.opis}.`); drawNav(); render();
+  });
+  $$("[data-unskip]").forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    const x = findCheck(name, b.dataset.unskip); if (!x) return;
+    delete S.skip[name]?.[x.klucz];
+    skipLog(name, x, "przywrócono brak", null);
+    applySkips(name); say(`Przywrócono: ${x.opis}.`); drawNav(); render();
+  });
+}
+function skipNote(x) {
+  const k = x.pominiecie; if (!k) return "";
+  return `<small>Pominięte przez referenta${k.kto ? ` (${esc(k.kto)})` : ""}${k.powod ? `: ${esc(k.powod)}` : ", bez uzasadnienia"}.</small>`;
+}
+function skipBtn(x) {
+  if (x.wynik === "pominiete") return `<button type="button" class="btn sm skipbtn" data-unskip="${esc(x.klucz)}">Przywróć</button>`;
+  return SKIPPABLE.includes(x.wynik) ? `<button type="button" class="btn sm skipbtn" data-skip="${esc(x.klucz)}" title="Oznacz jako sprawdzone mimo braku, z uzasadnieniem w dzienniku">Pomiń</button>` : "";
+}
+
 /* ---------- pulpit sprawy ---------- */
 function caseTitle(name) {
   const odw = caseItems(name).find(i => i.klasa === "odwolanie")?.json;
   const a = odw?.Odwolujacy?.[0]?.nazwa, b = odw?.Zamawiajacy?.[0]?.nazwa;
   return { title: a && b ? `${a} przeciwko ${b}` : (a || name), odw };
 }
-const ICON = { ok: ['<span class="ico st-ok" aria-hidden="true">✓</span>', "spełnione"], brak: ['<span class="ico st-bad" aria-hidden="true">✕</span>', "brak"], niezgodne: ['<span class="ico st-bad" aria-hidden="true">✕</span>', "niezgodne"], ostrzezenie: ['<span class="ico st-warn" aria-hidden="true">!</span>', "do sprawdzenia"], brak_danych: ['<span class="ico st-muted" aria-hidden="true">?</span>', "brak danych"], nie_dotyczy: ['<span class="ico st-muted" aria-hidden="true">–</span>', "nie dotyczy"] };
-function checkLi(x) { const [ic, lab] = ICON[x.wynik] || ICON.brak_danych; return `<li>${ic}<span><span class="sr-only">${lab}: </span>${x.wynik === "brak" || x.wynik === "niezgodne" ? `<b>${esc(x.opis)}</b>` : esc(x.opis)}${x.szczegoly ? `<small>${esc(x.szczegoly)}</small>` : ""}</span></li>`; }
+const ICON = { ok: ['<span class="ico st-ok" aria-hidden="true">✓</span>', "spełnione"], brak: ['<span class="ico st-bad" aria-hidden="true">✕</span>', "brak"], niezgodne: ['<span class="ico st-bad" aria-hidden="true">✕</span>', "niezgodne"], ostrzezenie: ['<span class="ico st-warn" aria-hidden="true">!</span>', "do sprawdzenia"], brak_danych: ['<span class="ico st-muted" aria-hidden="true">?</span>', "brak danych"], nie_dotyczy: ['<span class="ico st-muted" aria-hidden="true">–</span>', "nie dotyczy"], pominiete: ['<span class="ico st-muted" aria-hidden="true">↷</span>', "pominięte"] };
+function checkLi(x) { const [ic, lab] = ICON[x.wynik] || ICON.brak_danych; return `<li class="${x.wynik === "pominiete" ? "skipped" : ""}">${ic}<span><span class="sr-only">${lab}: </span>${x.wynik === "brak" || x.wynik === "niezgodne" ? `<b>${esc(x.opis)}</b>` : `<span>${esc(x.opis)}</span>`}${skipBtn(x)}${x.szczegoly ? `<small>${esc(x.szczegoly)}</small>` : ""}${skipNote(x)}</span></li>`; }
 function renderCase() {
   const name = S.caseName, its = caseItems(name), ch = S.checks[name];
   const { title, odw } = caseTitle(name);
@@ -536,7 +583,7 @@ function renderCase() {
     <section class="stats" aria-label="Stan teczki">
       <div class="card stat"><div class="l">Dokumenty w teczce</div><div class="v">${its.length}</div><div class="s">${pend ? `${pend} w analizie · ` : ""}${recog} rozpoznane, ${rej} ${plural(rej, "odrzucony", "odrzucone", "odrzuconych")}</div></div>
       <div class="card stat"><div class="l">Pola do sprawdzenia</div><div class="v ${todo ? "warn" : "ok"}">${todo}</div><div class="s">puste, z modelu językowego albo z błędną sumą</div></div>
-      <div class="card stat"><div class="l">Kompletność formalna</div><div class="v ${!ch ? "" : misses.length ? "bad" : "ok"}">${!ch ? "…" : misses.length ? `${misses.length} ${plural(misses.length, "brak", "braki", "braków")}` : "bez braków"}</div><div class="s">${ch ? (misses.map(x => esc(x.opis.toLowerCase())).slice(0, 2).join(", ") || "wszystkie wymagania spełnione") : "liczenie…"}</div></div>
+      <div class="card stat"><div class="l">Kompletność formalna</div><div class="v ${!ch ? "" : misses.length ? "bad" : "ok"}">${!ch ? "…" : misses.length ? `${misses.length} ${plural(misses.length, "brak", "braki", "braków")}` : "bez braków"}</div><div class="s">${ch ? (misses.map(x => esc(x.opis.toLowerCase())).slice(0, 2).join(", ") || (ch.podsumowanie.pominiete ? `${ch.podsumowanie.pominiete} ${plural(ch.podsumowanie.pominiete, "pozycja pominięta", "pozycje pominięte", "pozycji pominiętych")} przez referenta` : "wszystkie wymagania spełnione")) : "liczenie…"}</div></div>
       <div class="card stat"><div class="l">${esc(term?.opis || "Termin")}</div><div class="v">${term?.do ? fmtDate(term.do) : "—"}</div><div class="s">${term?.do ? `${term.dni} dni od czynności${term.przesuniety ? ", przesunięty na dzień roboczy" : ""}` : "brak daty czynności"}</div></div>
     </section>
 
@@ -562,6 +609,7 @@ function renderCase() {
   $$("tr[data-doc]").forEach(r => { const open = () => go("dokument", { item: its[+r.dataset.doc] }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
   $$("a[data-case]").forEach(a => a.onclick = (e) => { e.preventDefault(); go("sprawa", { caseName: a.dataset.case }); });
   $("#zipCase").onclick = () => downloadZip(its, `aktomat_${name}.zip`);
+  bindSkips(name);
 }
 function relatedCases(name, zp) {
   const keys = [zp.numer_postepowania, zp.numer_bzp].filter(Boolean).map(compact);
@@ -644,6 +692,11 @@ function renderViewer() {
 }
 
 function renderPanel() {
+  const keep = S.tab === "dane" ? $("#fields")?.scrollTop : null;
+  renderPanelInner();
+  if (keep != null && $("#fields")) $("#fields").scrollTop = keep;
+}
+function renderPanelInner() {
   const it = S.current, p = $("#panel");
   if (it.pending) { p.innerHTML = `<div class="empty"><span class="spinner"></span><h3>Trwa analiza dokumentu</h3></div>`; return; }
   if (it.blad) { p.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p></div>`; return; }
@@ -676,8 +729,8 @@ function renderPanel() {
       <button class="btn" type="button" id="dl">Pobierz JSON</button>
       ${c.todo ? '<button class="btn" type="button" id="approveAll">Zatwierdź wszystkie</button>' : ""}
       ${others.length ? '<button class="btn primary" type="button" id="next">Następny do sprawdzenia</button>' : `<button class="btn primary" type="button" id="toCase">Wróć do sprawy</button>`}</div>`;
-  $$("#panel [data-filter]").forEach(b => b.onclick = () => { S.filter = b.dataset.filter; S.tab = "dane"; renderPanel(); });
-  $$("#panel [data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderPanel(); });
+  $$("#panel [data-filter]").forEach(b => b.onclick = () => { S.filter = b.dataset.filter; S.tab = "dane"; renderPanelInner(); });
+  $$("#panel [data-tab]").forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderPanelInner(); });
   bindFields(it);
   bindPanelFoot(it, others);
   $("#approveAll") && ($("#approveAll").onclick = () => {
@@ -725,17 +778,29 @@ function fieldHtml(it, pth, f) {
     <div class="fb"><span class="msg" data-msg="1">${fieldMsg(it, pth, f)}</span>${ok ? `<span class="ok-mark">✓ zatwierdzone</span><button type="button" class="btn sm" data-unok="1">Cofnij</button>` : `<button type="button" class="btn sm primary" data-ok="1">Zatwierdź</button>`}</div>
     ${ev}${notes}</div>`;
 }
-function bindFields(it) {
+function bindFields(it) { $$("#fields .field").forEach(el => bindField(it, el)); }
+function bindField(it, el) {
   const pola = it.slad?.pola || {};
-  $$("#fields .field").forEach(el => {
+  {
     const pth = el.dataset.path, inp = $("input", el);
     el.addEventListener("click", (e) => { if (e.target.closest("input,button:not([data-loc])")) return; activate(el, pth); locate(pola[pth]); });
     inp.addEventListener("focus", () => { activate(el, pth); locate(pola[pth]); });
     inp.addEventListener("change", () => applyEdit(it, pth, inp.value));
     inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); applyEdit(it, pth, inp.value); approve(it, pth, true); } });
     $("[data-ok]", el)?.addEventListener("click", () => { applyEdit(it, pth, inp.value); approve(it, pth, true); });
-    $("[data-unok]", el)?.addEventListener("click", () => { delete it.ok[pth]; logEntry(it, pth, "cofnięto zatwierdzenie", null, null); renderPanel(); drawNav(); });
-  });
+    $("[data-unok]", el)?.addEventListener("click", () => { delete it.ok[pth]; logEntry(it, pth, "cofnięto zatwierdzenie", null, null); updateField(it, pth); drawNav(); });
+  }
+}
+// Odświeża jedną kartę pola i pasek postępu bez przerysowania listy (lista nie skacze na górę).
+function updateField(it, pth) {
+  const el = $$("#fields .field").find(x => x.dataset.path === pth);
+  if (!el) return renderPanel();
+  const tmp = document.createElement("div"); tmp.innerHTML = fieldHtml(it, pth, it.slad.pola[pth]).trim();
+  const nu = tmp.firstElementChild; el.replaceWith(nu); bindField(it, nu);
+  const c = counts(it);
+  $("#progBar") && ($("#progBar").style.width = `${c.total ? c.done / c.total * 100 : 0}%`);
+  $("#progTxt") && ($("#progTxt").textContent = `${c.done} z ${c.total} pól zatwierdzonych`);
+  $("#todoTxt") && ($("#todoTxt").textContent = c.todo ? `${c.todo} do sprawdzenia` : "wszystko sprawdzone");
 }
 function applyEdit(it, pth, text) {
   const f = it.slad.pola[pth], prev = valOf(it, pth), val = parseLike(text, f.wartosc);
@@ -749,9 +814,9 @@ function applyEdit(it, pth, text) {
 function approve(it, pth, advance) {
   it.ok[pth] = true; logEntry(it, pth, "zatwierdzono", null, valOf(it, pth));
   const order = Object.keys(it.slad.pola), idx = order.indexOf(pth);
-  const nextP = order.slice(idx + 1).concat(order.slice(0, idx)).find(x => needsCheck(it, x));
-  renderPanel(); drawNav();
-  if (advance && nextP) { const inp = $(`#${fieldId(nextP)}`); if (inp) { inp.focus(); inp.select?.(); inp.scrollIntoView({ block: "nearest" }); } }
+  const nextP = S.filter === "todo" ? order.slice(idx + 1).concat(order.slice(0, idx)).find(x => needsCheck(it, x)) : order[idx + 1];
+  updateField(it, pth); drawNav();
+  if (advance && nextP) { const inp = $(`#${fieldId(nextP)}`); if (inp) { inp.focus({ preventScroll: true }); inp.select?.(); inp.closest(".field").scrollIntoView({ block: "nearest", behavior: "smooth" }); } }
   else if (advance && !nextP) say("Wszystkie pola tego dokumentu sprawdzone.");
 }
 function refreshFieldFlags() {
@@ -818,7 +883,7 @@ function renderControl() {
   const sums = ch.podsumowanie.bledne_sumy;
   const term = ch.terminy[0];
   const fmt = (vals) => vals && vals.length ? vals.map(v => esc(v)).join(", ") : '<span class="st-muted">brak</span>';
-  const res = (w) => w === "ok" ? '<span class="st-ok">zgodne</span>' : w === "niezgodne" ? '<span class="st-bad">niezgodne</span>' : '<span class="st-muted">brak danych</span>';
+  const res = (w) => w === "ok" ? '<span class="st-ok">zgodne</span>' : w === "niezgodne" ? '<span class="st-bad">niezgodne</span>' : w === "pominiete" ? '<span class="st-muted">pominięte</span>' : '<span class="st-muted">brak danych</span>';
   $("#main").innerHTML = `<div class="page">
     <div class="headrow"><div>
       <div class="crumb"><button type="button" data-go="start">Sprawy</button> / <button type="button" data-go="sprawa">${esc(name)}</button> / Kontrola formalna</div>
@@ -830,7 +895,7 @@ function renderControl() {
       <div class="wide" style="display:flex;flex-direction:column;gap:16px">
         <section class="card" aria-labelledby="h-zg"><div class="card-h"><h2 id="h-zg">Zgodność między dokumentami</h2></div>
           <div class="tw"><table><thead><tr><th>Sprawdzenie</th><th>Wartość A</th><th>Wartość B</th><th>Wynik</th></tr></thead><tbody>
-          ${ch.zgodnosc.map(x => `<tr><td>${esc(x.opis)}${x.szczegoly && x.wynik !== "ok" ? `<div class="st-muted" style="font-size:12.5px">${esc(x.szczegoly)}</div>` : ""}</td><td>${fmt(x.a)}</td><td>${fmt(x.b)}</td><td>${res(x.wynik)}</td></tr>`).join("")}
+          ${ch.zgodnosc.map(x => `<tr class="${x.wynik === "pominiete" ? "skipped-row" : ""}"><td>${esc(x.opis)}${x.szczegoly && x.wynik !== "ok" ? `<div class="st-muted" style="font-size:12.5px">${esc(x.szczegoly)}</div>` : ""}<div class="checks">${skipNote(x)}</div></td><td>${fmt(x.a)}</td><td>${fmt(x.b)}</td><td>${res(x.wynik)}${x.wynik === "niezgodne" || x.wynik === "pominiete" ? `<div class="checks" style="margin-top:6px">${skipBtn(x).replace("skipbtn", "")}</div>` : ""}</td></tr>`).join("")}
           </tbody></table></div></section>
         <section class="card" aria-labelledby="h-wym"><div class="card-h"><h2 id="h-wym">Wymagane dokumenty i pola</h2></div>
           <div class="card-b"><ul class="checks">${[...ch.wymagane, ...ch.pola].map(checkLi).join("")}</ul></div></section>
@@ -856,6 +921,7 @@ function renderControl() {
     </div>
   </div>`;
   $$("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
+  bindSkips(name);
   if (term) {
     const upd = async () => {
       const od = $("#tStart").value, dni = +$("#tDays").value;
@@ -878,7 +944,7 @@ function renderControl() {
 const csvCell = (v) => { const s = v == null ? "" : typeof v === "object" ? JSON.stringify(v) : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 const csv = (rows) => rows.map(r => r.map(csvCell).join(";")).join("\r\n");
 function logCsv(list) { return csv([["czas", "referent", "sprawa", "plik", "pole", "akcja", "z", "na"], ...list.map(l => [l.czas, l.kto, l.sprawa, l.plik, l.pole, l.akcja, l.z, l.na])]); }
-function controlCsv(ch) { return csv([["rodzaj", "sprawdzenie", "wynik", "szczegóły"], ...ch.wymagane.map(x => ["dokument", x.opis, x.wynik, x.szczegoly]), ...ch.pola.map(x => ["pole", x.opis, x.wynik, x.szczegoly]), ...ch.zgodnosc.map(x => ["zgodność", x.opis, x.wynik, x.szczegoly]), ...ch.terminy.map(x => ["termin", x.opis, x.do || x.wynik, x.od ? `od ${x.od}, ${x.dni} dni` : x.szczegoly])]); }
+function controlCsv(ch) { const sz = (x) => [x.szczegoly, x.pominiecie ? `pominięte przez referenta${x.pominiecie.kto ? " " + x.pominiecie.kto : ""}: ${x.pominiecie.powod || "bez uzasadnienia"} (pierwotnie: ${x.wynik_pierwotny})` : null].filter(Boolean).join(" | "); return csv([["rodzaj", "sprawdzenie", "wynik", "szczegóły"], ...ch.wymagane.map(x => ["dokument", x.opis, x.wynik, sz(x)]), ...ch.pola.map(x => ["pole", x.opis, x.wynik, sz(x)]), ...ch.zgodnosc.map(x => ["zgodność", x.opis, x.wynik, sz(x)]), ...ch.terminy.map(x => ["termin", x.opis, x.do || x.wynik, x.od ? `od ${x.od}, ${x.dni} dni` : x.szczegoly])]); }
 
 /* ---------- dziennik zmian ---------- */
 function renderLog() {
