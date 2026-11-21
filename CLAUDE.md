@@ -22,7 +22,7 @@ Python 3.11, FastAPI, Pydantic v2, pytest, uv. PyMuPDF (PDF z tekstem), OCR tylk
 ingest → text → classify (8 kategorii) → extract → validate → signatures → registries → rules (F1–F13) → output (JSON, Karta DOCX, wezwanie DOCX art. 518 ust. 1 Pzp, 3 dni).
 
 ## Kamienie milowe (commit po każdym, testy zielone)
-M1 szkielet+model+fixtures · M2 ingest/text/classify · M3 extract · M4 validate+registries · M5 rules+testy · M6 output+API · M7 eval+accuracy · M8 frontend · M9 `make demo` offline.
+M1 ✅ szkielet+model+fixtures · synth ✅ dane syntetyczne · M5 ✅ rules+testy · następne: M2 ingest/text/classify · M3 extract · M4 validate+registries · M6 output+API · M7 eval+accuracy · M8 frontend · M9 `make demo` offline.
 
 ## Komendy (uzupełniać w miarę powstawania)
 Środowisko: brak systemowego Pythona; używać `uv` (`uv run ...`). Docker 29, Node 24 dostępne.
@@ -37,6 +37,9 @@ M1 szkielet+model+fixtures · M2 ingest/text/classify · M3 extract · M4 valida
 - (Synth) Mock KRS: `GET /mock/krs/api/krs/OdpisAktualny/{krs}?rejestr=P` z `data/synthetic/krs_mock/`. Kształt JSON jest z pamięci (api-krs.ms.gov.pl było niedostępne z tej maszyny) → zweryfikować z żywym API. KRS fikcyjne: 0009000100+ (poza zakresem istniejących); NIP prefiks 999, REGON prefiks 99 (poprawne sumy kontrolne).
 - (Synth) Python z plikami zawierającymi PL znaki: `python -I -X utf8` (`-I` ignoruje PYTHONUTF8).
 - (Public) `data/public/IQVIA220620odwolanieABM.pdf` (48 str., warstwa tekstowa) pobrany przez PowerShell (curl w bashu nie miał DNS). Katalog poza gitem.
+- (M5) Reguły: `backend/pipeline/rules.py` (`evaluate(Facts, cfg) -> RulesResult`), kalendarz: `pipeline/calendar_pl.py`, parametry: `config/rules.yaml` (zero kwot/terminów w kodzie). Przy nieustalonych danych wejściowych (np. tryb powiadomienia, próg UE) reguła liczy WSZYSTKIE interpretacje: wszystkie zgodne → pewny wynik, inaczej do_weryfikacji_ręcznej. Czas podpisu porównywany jako data w Europe/Warsaw.
+- (M5) F5: dopasowanie nazwisk = NFKD bez diakrytyków (ł osobno) + rapidfuzz token_set_ratio ≥ 85 + strażnik tokenów (inicjał ok; „Jan” ≠ „Janusz” → <85 → ręcznie). Wynik 70–85 → do_weryfikacji. F7: brak dowodu opłaty 17 zł → do_weryfikacji (nie niespełnione; możliwe zwolnienia), przy braku pełnomocnika → nie_dotyczy. F9–F11: brak treści = niespełnione tylko gdy `text_quality_ok`, inaczej ręcznie. F4: ważny podpis bez ustalonej kwalifikacji → ręcznie.
+- (M5) Odnośniki do przepisów oznaczone „(?)” w config/rules.yaml (inne niż art. 515 ust. 1 pkt 1 lit. a z Zał. C) — do potwierdzenia z mentorem.
 
 ## Stan danych / ryzyka
 - `./data/uzp` — dane UZP jeszcze nie dostarczone (dojdą później); pracujemy na syntetycznych.
@@ -47,3 +50,4 @@ M1 szkielet+model+fixtures · M2 ingest/text/classify · M3 extract · M4 valida
 - F13 / e-Doręczenia: skąd brać adres ADE (BAE) w danych testowych?
 - Numer rachunku UZP do wpisu (klasyfikacja przelewów) i dokładna kwota/numer opłaty skarbowej 17 zł — w danych syntetycznych rachunek jest FIKCYJNY; jaki jest prawdziwy numer rachunku UZP?
 - Czy odwołanie podpisane niekwalifikowanym podpisem z nieznanego CA ma być „niespełnione” czy „do weryfikacji ręcznej” (F4)? Przyjęliśmy: do weryfikacji.
+- Potwierdzić podstawy prawne terminów 15/5/10 dni i zaniechania (w config oznaczone „(?)”); czy nadpłata wpisu jest „prawidłowa” (przyjęto: tylko równość z tolerancją 0,01); czy brak dowodu opłaty 17 zł bez zwolnienia ma dawać „niespełnione” (przyjęto: do weryfikacji).

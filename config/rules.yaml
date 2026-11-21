@@ -1,0 +1,36 @@
+# Parametry reguł F1–F13. ŻADNYCH kwot ani terminów w kodzie — tylko tutaj.
+# Źródło: Zał. G starszego OPZ (tabele terminów i wpisu). Odnośniki do przepisów oznaczone "?" do potwierdzenia z mentorem UZP.
+
+# Art. 8 ust. 4 Pzp: źródła UZP są sprzeczne co do przesuwania terminu z soboty/niedzieli/święta na dzień roboczy.
+shift_weekend_holiday: true
+
+# F13 obowiązuje tylko dla postępowań wszczętych od tej daty.
+data_zmiany_rezimu: "2026-03-13"
+
+# Wigilia (24.12) jest dniem wolnym od roku:
+wigilia_wolna_od_roku: 2025
+
+# Terminy (dni kalendarzowe od czynności). Klucze: powyzej_progu_ue / ponizej_progu_ue.
+terminy:
+  powyzej_progu_ue:
+    elektroniczna: {dni: 10, podstawa: "art. 515 ust. 1 pkt 1 lit. a PZP"}
+    inna:          {dni: 15, podstawa: "art. 515 ust. 1 pkt 1 lit. b PZP (?)"}
+    zaniechanie:   {dni: 10, podstawa: "art. 515 PZP (zaniechanie) (?)"}
+  ponizej_progu_ue:
+    elektroniczna: {dni: 5,  podstawa: "art. 515 ust. 1 pkt 2 lit. a PZP (?)"}
+    inna:          {dni: 10, podstawa: "art. 515 ust. 1 pkt 2 lit. b PZP (?)"}
+    zaniechanie:   {dni: 5,  podstawa: "art. 515 PZP (zaniechanie) (?)"}
+
+# Wpis od odwołania (PLN): poniżej progu UE / od progu UE.
+wpis:
+  dostawy_uslugi:   {ponizej_progu_ue: 7500,  powyzej_progu_ue: 15000}
+  roboty_budowlane: {ponizej_progu_ue: 10000, powyzej_progu_ue: 20000}
+  tolerancja: 0.01
+
+# F7: opłata skarbowa od pełnomocnictwa.
+oplata_skarbowa_pelnomocnictwa: 17
+
+# F5: dopasowanie nazwisk (rapidfuzz token_set_ratio po NFKD bez diakrytyków).
+dopasowanie_nazwisk:
+  prog: 85
+  prog_niepewny: 70   # między tym a progiem → do weryfikacji ręcznej
