@@ -16,6 +16,9 @@ llm:
     reasoning_effort: medium
   # Profile wybierane w .env przez LLM_PROFILE=<nazwa>; klucz/URL/model z <NAZWA>_API_KEY / _BASE_URL / _MODEL.
   profiles:
+    ovh:                    # OVHcloud AI Endpoints (Francja, UE); klucz w OVH_API_KEY. gpt-oss-20b = 21B
+      base_url: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+      model: gpt-oss-20b
     sherlock:               # CloudFerro Sherlock (polska firma, UE); klucz w SHERLOCK_API_KEY. Model 11B = 18 pkt UZP
       base_url: https://api-sherlock.cloudferro.com/openai/v1
       model: speakleash/Bielik-11B-v3.0-Instruct   # albo CYFRAGOVPL/PLLuM-12B-instruct, meta-llama/Llama-3.1-8B-Instruct (20 pkt)
