@@ -42,6 +42,8 @@ def build_prompt(cls: DocClass, doc_text: str) -> str:
         "",
         "Formaty: daty jako RRRR-MM-DD; kwoty jako liczba (kropka dziesiętna); NIP, KRS, REGON, PESEL i "
         "numery rachunków jako ciągi samych cyfr (bez spacji, bez 'PL'); brak informacji = null.",
+        "Tekst może pochodzić z OCR (literówki, brak polskich znaków, rozjechane kolumny): przywróć polskie "
+        "znaki w nazwach i nazwiskach tylko wtedy, gdy są oczywiste; cyfr nie poprawiaj.",
         "Listy obiektów: jeden element na każdy podmiot/osobę; pusta informacja = lista z jednym elementem "
         "wypełnionym null tylko jeśli szablon tego wymaga.",
         "",

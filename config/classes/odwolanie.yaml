@@ -22,6 +22,7 @@ classify:
   negative:
     - {pattern: 'udzielam pelnomocnictwa|niniejszym udzielam|ustanawiam pelnomocnik', weight: 4}
     - {pattern: 'potwierdzenie (wykonania )?(przelewu|operacji)|rachunek (nadawcy|odbiorcy|zleceniodawcy)', weight: 4}
+    - {pattern: 'krajowa izba odwolawcza\s*-?\s*w skladzie|\borzeka\s*:|przewodniczac\w*\s*:|protokolant|w imieniu rzeczypospolitej', weight: 8}
     - {pattern: 'see the notice on ted website|ogloszenie o zamowieniu.{0,40}tryb standardowy', weight: 6}
 
 # --- Wzorzec wyniku (struktura 1:1 z oczekiwane-json/odwolanie.json) ---
@@ -68,7 +69,7 @@ enums:
     9: Decyzja o unieważnieniu postępowania
     10: Zaniechanie unieważnienia postępowania
     11: Opis przedmiotu zamówienia (OPZ)
-    12: Inna czynność lub zaniechanie zamawiającego   # brak w danych treningowych - etykieta robocza
+    12: Projektowane postanowienia umowy
 
 # --- Sekcje dokumentu (zakres tekstu dla reguł) ---
 sections:
@@ -92,7 +93,7 @@ lists:
 # --- Instrukcje dla modelu językowego (dokładane do promptu) ---
 llm_instructions: |
   - OdwolanieKIO.data i miejscowosc bierz WYŁĄCZNIE z nagłówka pisma (linia typu "Miasto, dnia 9 listopada 2026 r." albo "Miasto, 28.08.2026"). Jeśli pismo nie ma takiej linii - null (nie bierz daty z treści).
-  - czynnosc_powod_id ustal WYŁĄCZNIE na podstawie pierwszej zaskarżonej czynności/zaniechania zamawiającego (zwykle zdanie "Zamawiający w dniu ... [czynność]" albo pierwszy zarzut). Wybierz id ze słownika powody. Rozróżniaj czynność od zaniechania: "nie odrzucił / zaniechał odrzucenia" = 7, "odrzucił" = 1; "nie wykluczył / zaniechał wykluczenia" = 8, "wykluczył" = 3; "zaniechał unieważnienia" = 10, "unieważnił" = 9; wybór najkorzystniejszej oferty = 2; publikacja SWZ / ogłoszenia z SWZ = 4; zmiana/modyfikacja SWZ = 5; odpowiedzi/wyjaśnienia treści SWZ = 6; postanowienia Opisu Przedmiotu Zamówienia = 11. Wezwania zamawiającego do wyjaśnień (wcześniejsze zdarzenia) NIE są zaskarżoną czynnością.
+  - czynnosc_powod_id ustal WYŁĄCZNIE na podstawie pierwszej zaskarżonej czynności/zaniechania zamawiającego (zwykle zdanie "Zamawiający w dniu ... [czynność]" albo pierwszy zarzut). Wybierz id ze słownika powody. Rozróżniaj czynność od zaniechania: "nie odrzucił / zaniechał odrzucenia" = 7, "odrzucił" = 1; "nie wykluczył / zaniechał wykluczenia" = 8, "wykluczył" = 3; "zaniechał unieważnienia" = 10, "unieważnił" = 9; wybór najkorzystniejszej oferty = 2; publikacja SWZ / ogłoszenia z SWZ = 4; zmiana/modyfikacja SWZ = 5; odpowiedzi/wyjaśnienia treści SWZ = 6; postanowienia Opisu Przedmiotu Zamówienia = 11; projektowane postanowienia umowy / wzór umowy = 12. Wezwania zamawiającego do wyjaśnień (wcześniejsze zdarzenia) NIE są zaskarżoną czynnością.
   - czynnosc_dzien to data tej czynności (RRRR-MM-DD); jeśli brak wiarygodnej daty - null.
   - Odwolujacy: wykonawca wnoszący odwołanie. Przy konsorcjum podaj tylko Lidera konsorcjum (jeden element listy). przez-pelnomocnika = 1 jeśli odwołującego reprezentuje pełnomocnik (adwokat, radca prawny, inna osoba), inaczej 0.
   - pelnomocnik.imie_nazwisko: tylko PIERWSZY wymieniony pełnomocnik, bez tytułów (adw., r. pr.), w mianowniku. pelnomocnik.nazwa: nazwa kancelarii/podmiotu zatrudniającego pełnomocnika (np. z "adres do korespondencji"). pelnomocnik.mail: e-mail kontaktowy podany przy odwołującym/pełnomocniku.
@@ -139,6 +140,7 @@ fields:
           - {pattern: 'odrzuc|odrzuci', value: 1}
           - {pattern: 'zmodyfikow|modyfikac|zmieni\w*\s+treść|zmian\w*\s+treści', value: 5}
           - {pattern: 'odpowiedzi|wyjaśnie\w*\s+treści|wyjaśnień\s+treści', value: 6}
+          - {pattern: 'projektowan\w*\s+postanowie\w*\s+umowy|wzor\w*\s+umowy|istotn\w*\s+postanowie\w*\s+umowy', value: 12}
           - {pattern: 'opis\w*\s+przedmiotu\s+zamówienia|\bOPZ\b', value: 11}
           - {pattern: 'specyfikac|\bSWZ\b|ogłoszeni\w*\s+o\s+zamówieniu', value: 4}
           - {pattern: 'wyb[oó]r\w*|wybra\w+|wyniku\s+postępowania', value: 2}

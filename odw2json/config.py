@@ -64,6 +64,8 @@ def load_settings() -> dict:
     llm["api_key"] = os.environ.get("LLM_API_KEY") or os.environ.get("GROQ_API_KEY")
     if os.environ.get("LLM_ENABLED") is not None:
         llm["enabled"] = os.environ["LLM_ENABLED"].strip() not in ("0", "false", "no", "")
+    if os.environ.get("OCR_ENGINE"):
+        s.setdefault("ocr", {})["engine"] = os.environ["OCR_ENGINE"]
     if os.environ.get("TESSERACT_CMD"):
         s.setdefault("ocr", {})["tesseract_cmd"] = os.environ["TESSERACT_CMD"]
     return s

@@ -10,7 +10,7 @@
 
 ## Szybki start
 
-Wymagania: **Python 3.13+**, opcjonalnie [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) z językiem polskim (dla skanów).
+Wymagania: **Python 3.13+**. Do skanów zalecany [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) z językiem polskim (przy instalacji zaznacz *Polish*). Bez niego aplikacja sama użyje zapasowego OCR (RapidOCR, instalowany z `requirements.txt`, bez polskich znaków, nieco słabszy).
 
 ```bat
 :: Windows
@@ -44,7 +44,7 @@ input/                         output/                         trace/ (ślad eks
 │   ├── odwolanie_nr_1.pdf     │   ├── odwolanie_nr_1.json     │   ├── odwolanie_nr_1.trace.json
 │   ├── pelnomocnictwo.pdf     │   ├── pelnomocnictwo.json     │   └── ...
 │   ├── przelew_nr_1.pdf       │   └── przelew_nr_1.json
-│   └── ogloszenie_TED.pdf     │       (dokument spoza klas: brak JSON, powód w trace/)
+│   └── ogloszenie_TED.pdf     │   └── ogloszenie_TED.json     (dokument spoza klas: pusty JSON `{}`, powód w trace/)
 ```
 
 Każdy JSON nazywa się tak samo jak odpowiadający mu PDF. Struktura jest 1:1 ze schematami UZP (`oczekiwane-json/`).
@@ -63,11 +63,19 @@ Konfiguracja w `.env` (szablon: `.env.example`), domyślnie:
 
 Domyślny dostawca to **Scaleway Generative APIs (Paryż, UE)**, zgodnie z wymogiem FAQ: usługodawca i serwer w UE, model z możliwością instalacji lokalnej. Ten sam kod działa z lokalnym serwerem (vLLM, Ollama) po zmianie `LLM_BASE_URL` i `LLM_MODEL`. Gdy LLM jest niedostępny, aplikacja nie przerywa pracy: zwraca wynik z reguł i zapisuje błąd w śladzie.
 
+## Wykorzystany model językowy
+
+- **Model:** `gpt-oss-120b` (OpenAI, open-weight, licencja Apache 2.0, ~117 mld parametrów w architekturze MoE, ~5 mld aktywnych na token). Można go uruchomić lokalnie (vLLM, Ollama, llama.cpp).
+- **Dostawca API:** Scaleway Generative APIs, Paryż (firma i serwery w UE). API zgodne z OpenAI.
+- **Zmiana modelu:** `LLM_MODEL` w `.env`, np. mniejszy `gpt-oss-20b` albo `mistral-small-3.2-24b-instruct-2506`. Kod się nie zmienia.
+- **Rola modelu:** wypełnia pola wg opisów z YAML; każda jego wartość jest sprawdzana w tekście dokumentu i walidowana formatem. Reguły deterministyczne działają jako weryfikacja i zapas, więc aplikacja zwraca wynik także bez LLM (`LLM_ENABLED=0`).
+- **Parametry:** temperatura 0, tryb JSON, do 24 000 znaków tekstu dokumentu na zapytanie (kluczowe dane są na pierwszych stronach).
+
 ## Jak to działa
 
 ```
-PDF ──► tekst stron (PyMuPDF; strona bez tekstu ► OCR Tesseract pol)
-    ──► klasyfikacja (ważone wzorce z YAML, próg; brak klasy ► pomiń)
+PDF ──► tekst stron (PyMuPDF; strona bez tekstu ► OCR: Tesseract pol, zapasowo RapidOCR)
+    ──► klasyfikacja (ważone wzorce z YAML, próg; brak klasy ► pusty JSON)
     ──► reguły deterministyczne (regex, sekcje, bloki podmiotów)  ┐
     ──► LLM: prompt zbudowany z opisów pól w YAML ► JSON          ├► wybór wartości pole po polu
     ──► normalizacja (daty ISO, kwoty, NIP/KRS/rachunki = cyfry)  ┘   + weryfikacja w tekście
@@ -120,7 +128,9 @@ Ewaluacja liczy F1 dokładnie według definicji UZP: TP = wartość zgodna (dłu
 | zbiór | tryb | F1 |
 |---|---|---|
 | 60 spraw treningowych UZP (PDF z tekstem) | same reguły, bez LLM | 1.000 |
-| 12 z tych spraw zamienionych na skany 150 dpi (OCR) | same reguły, bez LLM | 0.963 |
+| 12 z tych spraw zamienionych na skany 150 dpi, OCR Tesseract | same reguły, bez LLM | 0.963 |
+| j.w., zapasowy OCR RapidOCR (bez Tesseract) | same reguły, bez LLM | 0.915 |
+| klasyfikacja 60 spraw + 16 dokumentów negatywnych UZP | | 196/196 |
 | j.w. | reguły + LLM (gpt-oss-120b) | do zmierzenia: `python -m odw2json eval --gt ...` z kluczem w `.env` |
 
 Wynik na danych treningowych jest optymistyczny, bo reguły były strojone na tych samych szablonach. Prawdziwe odwołania są pisane swobodnie i tam główną robotę wykonuje LLM, a reguły działają jako weryfikacja i zapas.

@@ -17,6 +17,7 @@ llm:
 
 ocr:
   enabled: true
+  engine: auto              # auto | tesseract | rapidocr  (auto: Tesseract, a gdy go brak - RapidOCR z pip)
   lang: pol
   dpi: 300
   min_chars_per_page: 40    # strona z mniejszą liczbą znaków jest traktowana jak skan
@@ -25,3 +26,5 @@ ocr:
 
 classify_head_chars: 6000   # klasyfikacja na podstawie początku dokumentu
 workers: 4                  # równoległe dokumenty
+# Dokument spoza skonfigurowanych klas: zawartość pliku .json (UZP: "pusty plik .json"); null = nie twórz pliku
+unknown_output: "{}"

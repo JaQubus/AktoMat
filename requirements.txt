@@ -1,6 +1,7 @@
 # Python 3.13+
 pymupdf>=1.24
 pytesseract>=0.3.10
+rapidocr_onnxruntime>=1.2.3   # zapasowy OCR bez instalacji systemowej (gdy brak Tesseract)
 Pillow>=10.0
 PyYAML>=6.0
 rapidfuzz>=3.9
