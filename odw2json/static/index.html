@@ -148,6 +148,22 @@
   .sesslist td .acts { display: flex; gap: 6px; justify-content: flex-end; }
   .sesslist tr.cur td:first-child b::after { content: "bieżąca"; margin-left: 8px; font-size: 11.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
 
+  /* ---------- okna i powiadomienia ---------- */
+  .dlg .lbl { font-size: 13px; color: var(--muted); margin-bottom: -6px; }
+  .dlg textarea { min-height: 84px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 6px; padding: 10px 12px; font: inherit; font-size: 15px; background: var(--panel); color: var(--ink); }
+  .dlg .btn.danger { background: var(--bad); border-color: var(--bad); color: #fff; }
+  :root[data-theme="dark"] .dlg .btn.danger { color: #2a0d09; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dlg .btn.danger { color: #2a0d09; } }
+  #toasts { position: fixed; right: 16px; bottom: 16px; z-index: 1100; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; pointer-events: none; max-width: calc(100vw - 32px); }
+  .toast { pointer-events: auto; display: flex; align-items: flex-start; gap: 10px; min-width: 240px; max-width: 420px; background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-left: 4px solid var(--accent); border-radius: 8px; padding: 10px 10px 10px 14px; box-shadow: 0 8px 24px rgba(0,0,0,.18); font-size: 14px; animation: tIn .18s ease-out; }
+  .toast.bad { border-left-color: var(--bad); } .toast.warn { border-left-color: var(--warn); } .toast.ok { border-left-color: var(--ok); }
+  .toast .tx { flex: 1; padding-top: 2px; }
+  .toast button { border: 0; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+  .toast button:hover { background: var(--panel-2); color: var(--ink); }
+  .toast.out { opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; }
+  @keyframes tIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } .toast.out { transition: none; } }
+
   /* ---------- kalendarz ---------- */
   .dp-wrap { position: relative; display: block; }
   .dp-wrap > input { padding-right: 44px !important; width: 100%; box-sizing: border-box; }
@@ -349,6 +365,16 @@
 <input type="file" id="pickFolder" webkitdirectory directory multiple hidden>
 <input type="file" id="pickZip" accept=".zip,application/zip" multiple hidden>
 <div class="sr-only" aria-live="polite" id="live"></div>
+<div id="toasts" aria-hidden="true"></div>
+<dialog class="dlg" id="askDlg" aria-labelledby="askH">
+  <form method="dialog" id="askForm">
+    <h2 id="askH"></h2>
+    <p id="askT"></p>
+    <label class="lbl" for="askIn" id="askL" hidden></label>
+    <textarea id="askIn" hidden></textarea>
+    <div class="row"><button class="btn" type="button" id="askNo">Anuluj</button><button class="btn primary" type="submit" id="askOk">OK</button></div>
+  </form>
+</dialog>
 <dialog class="dlg" id="whoDlg" aria-labelledby="whoH">
   <form method="dialog" id="whoForm">
     <h2 id="whoH">Kto pracuje nad sprawami?</h2>
@@ -364,7 +390,40 @@
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const say = (t) => { $("#live").textContent = t; };
+/* Komunikat: czytnik ekranu + powiadomienie w rogu ekranu (zamiast alert). */
+function say(t, kind) {
+  $("#live").textContent = t;
+  if (!t) return;
+  kind = kind || (/^(Nie udało|Błąd)/.test(t) ? "bad" : /^Pominięto pliki|Pominięto \d/.test(t) ? "warn" : "");
+  const box = $("#toasts"); if (!box) return;
+  while (box.children.length >= 4) box.firstElementChild.remove();
+  const el = document.createElement("div"); el.className = "toast " + kind;
+  el.innerHTML = `<span class="tx"></span><button type="button" aria-label="Zamknij">×</button>`;
+  el.firstElementChild.textContent = t; box.appendChild(el);
+  const close = () => { el.classList.add("out"); setTimeout(() => el.remove(), 220); };
+  el.lastElementChild.onclick = close;
+  let timer = setTimeout(close, kind === "bad" ? 8000 : 4000);
+  el.onmouseenter = () => clearTimeout(timer); el.onmouseleave = () => { timer = setTimeout(close, 2500); };
+}
+/* Okno pytania w stylu aplikacji (zamiast confirm/prompt). Zwraca tekst (z polem), true (bez pola) albo null. */
+function ask({ title, text = "", input = null, ok = "OK", cancel = "Anuluj", danger = false }) {
+  return new Promise((resolve) => {
+    const d = $("#askDlg"), inp = $("#askIn"), lbl = $("#askL");
+    $("#askH").textContent = title; $("#askT").textContent = text; $("#askT").hidden = !text;
+    inp.hidden = lbl.hidden = !input;
+    if (input) { lbl.textContent = input.label || ""; inp.placeholder = input.placeholder || ""; inp.value = input.value || ""; inp.rows = input.rows || 3; }
+    $("#askOk").textContent = ok; $("#askNo").textContent = cancel;
+    $("#askOk").classList.toggle("danger", danger); $("#askOk").classList.toggle("primary", !danger);
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; d.close(); resolve(v); };
+    $("#askForm").onsubmit = (e) => { e.preventDefault(); finish(input ? inp.value : true); };
+    $("#askNo").onclick = () => finish(null);
+    d.oncancel = (e) => { e.preventDefault(); finish(null); };
+    inp.onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey && (input?.rows || 3) === 1) { e.preventDefault(); finish(inp.value); } if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); finish(inp.value); } };
+    d.showModal();
+    setTimeout(() => (input ? (inp.focus(), inp.select()) : (danger ? $("#askNo") : $("#askOk")).focus()), 20);
+  });
+}
 const plural = (n, a, b, c) => n === 1 ? a : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? b : c;
 const clone = (o) => o == null ? o : JSON.parse(JSON.stringify(o));
 const fold = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").toLowerCase();
@@ -545,8 +604,9 @@ function newSession() {
   try { localStorage.removeItem("aktomat-sid"); } catch (e) {}
   sessState(); loadSessions().then(() => go("start"));
 }
-$("#sess").onclick = () => {
-  const v = window.prompt("Nazwa sesji:", S.sname); if (v === null || !v.trim()) return;
+$("#sess").onclick = async () => {
+  const v = await ask({ title: "Nazwa sesji", text: "Nazwa pojawia się na liście zapisanych sesji.", input: { label: "Nazwa", value: S.sname, rows: 1 }, ok: "Zapisz" });
+  if (v === null || !v.trim()) return;
   S.sname = v.trim(); sessState(); markDirty();
 };
 function sessionsHtml() {
@@ -562,7 +622,7 @@ function bindSessions() {
   $$("[data-open]").forEach(b => b.onclick = () => openSession(b.dataset.open));
   $$("[data-del]").forEach(b => b.onclick = async () => {
     const x = S.sessions.find(s => s.id === b.dataset.del);
-    if (!window.confirm(`Usunąć sesję „${x?.nazwa}” razem z wczytanymi plikami PDF? Tego nie da się cofnąć.`)) return;
+    if (!await ask({ title: "Usunąć sesję?", text: `Sesja „${x?.nazwa}” zostanie usunięta razem z wczytanymi plikami PDF, poprawkami i dziennikiem. Tego nie da się cofnąć.`, ok: "Usuń sesję", danger: true })) return;
     await fetch(`/api/sesje/${b.dataset.del}`, { method: "DELETE" });
     if (b.dataset.del === S.sid) return newSession();
     await loadSessions(); render();
@@ -744,10 +804,11 @@ function applySkips(name) {
 function findCheck(name, key) { const ch = S.checks[name]; return ch && [...ch.wymagane, ...ch.pola, ...ch.zgodnosc].find(x => x.klucz === key); }
 function skipLog(name, x, akcja, na) { S.log.push({ czas: new Date().toISOString(), kto: S.who || "", sprawa: name, plik: "(kontrola formalna)", pole: x.opis, akcja, z: null, na: na ?? null }); }
 function bindSkips(name) {
-  $$("[data-skip]").forEach(b => b.onclick = (e) => {
+  $$("[data-skip]").forEach(b => b.onclick = async (e) => {
     e.stopPropagation();
     const x = findCheck(name, b.dataset.skip); if (!x) return;
-    const powod = window.prompt(`Pominąć „${x.opis}”?\nUzasadnienie (opcjonalnie), np. „wpis uiszczony, potwierdzenie w systemie finansowym”:`, "");
+    const powod = await ask({ title: `Pominąć „${x.opis}”?`, text: "Pozycja przestanie liczyć się jako brak. Uzasadnienie trafi do dziennika zmian i raportu kontroli.",
+      input: { label: "Uzasadnienie (opcjonalnie)", placeholder: "np. wpis uiszczony, potwierdzenie w systemie finansowym" }, ok: "Pomiń" });
     if (powod === null) return;
     (S.skip[name] ||= {})[x.klucz] = { powod: powod.trim(), kto: S.who || "", czas: new Date().toISOString() };
     skipLog(name, x, "pominięto brak", powod.trim() || null);
