@@ -156,6 +156,10 @@ def r_sentence_map(rule, text):
     for m in rx(rule["anchor"], flags).finditer(text):
         rest = text[m.start(): m.start() + int(rule.get("window", 400))]
         e = _SENT_END.search(rest, len(m.group(0)))
+        if rule.get("cut"):   # własny koniec fragmentu, np. początek punktu "2." na liście zaskarżonych czynności
+            c = rx(rule["cut"], flags).search(rest, len(m.group(0)))
+            if c and (not e or c.start() < e.start()):
+                e = c
         sent = ws(rest[: e.start()] if e else rest)
         if skip and skip.search(sent):
             continue

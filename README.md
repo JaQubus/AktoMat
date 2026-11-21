@@ -63,6 +63,8 @@ Konfiguracja w `.env` (szablon: `.env.example`), domyślnie:
 
 Domyślny dostawca to **Scaleway Generative APIs (Paryż, UE)**, zgodnie z wymogiem FAQ: usługodawca i serwer w UE, model z możliwością instalacji lokalnej. Ten sam kod działa z lokalnym serwerem (vLLM, Ollama) po zmianie `LLM_BASE_URL` i `LLM_MODEL`. Gdy LLM jest niedostępny, aplikacja nie przerywa pracy: zwraca wynik z reguł i zapisuje błąd w śladzie.
 
+Do darmowych testów i ewaluacji można użyć **Groq** (`LLM_BASE_URL=https://api.groq.com/openai/v1`, `LLM_MODEL=openai/gpt-oss-120b`, ten sam model open-weight). Groq jest firmą z USA, więc w zgłoszeniu do UZP zostaje dostawca z UE.
+
 ## Wykorzystany model językowy
 
 - **Model:** `gpt-oss-120b` (OpenAI, open-weight, licencja Apache 2.0, ~117 mld parametrów w architekturze MoE, ~5 mld aktywnych na token). Można go uruchomić lokalnie (vLLM, Ollama, llama.cpp).
@@ -121,7 +123,7 @@ fields:
     description: Termin na uzupełnienie w dniach.
 ```
 
-Pole bez `rules` jest wypełniane przez LLM (i weryfikowane), pole z `rules` ma dodatkowo deterministyczny zapas. Dostępne typy pól: `string, text, name, person, int, enum, flag, date, amount, nip, krs, regon, pesel, account, email, bzp, ted, refno`. Rodzaje reguł: `regex, sentence_map, titled_persons, signatories, entity_name, first_line, const` (opis w `odw2json/rules.py`). Opcje pola: `prefer: llm|rules`, `require_grounding`, `derive` (pola wyliczane, `from` może być listą pól), `cast`, `vocabulary` (słownik poprawnych zapisów, np. `config/slowniki/miejscowosci.txt`: „Krakow” ze skanu → „Kraków”). Sekcje dokumentu (`sections`, z opcjami `end`, `max_chars`, `before`) i podział na wiele podmiotów (`lists`) też są w YAML. Podróbki odcina się wzorcami `classify.negative`. Zobacz `config/classes/odwolanie.yaml` jako pełny przykład.
+Pole bez `rules` jest wypełniane przez LLM (i weryfikowane), pole z `rules` ma dodatkowo deterministyczny zapas. Dostępne typy pól: `string, text, name, person, int, enum, flag, date, amount, nip, krs, regon, pesel, account, email, bzp, ted, refno`. Rodzaje reguł: `regex, sentence_map, titled_persons, signatories, entity_name, first_line, const` (opis w `odw2json/rules.py`). Opcje pola: `prefer: llm|rules`, `require_grounding`, `derive` (pola wyliczane, `from` może być listą pól), `cast`, `vocabulary` (słownik poprawnych zapisów, np. `config/slowniki/miejscowosci.txt`: „Krakow” ze skanu → „Kraków”). Sekcje dokumentu (`sections`, z opcjami `end`, `max_chars`, `before`) i podział na wiele podmiotów (`lists`) też są w YAML. Podróbki odcina się wzorcami `classify.negative`. Klucz `ocr_layout: columns` każe czytać skan kolumnami (bloki podpisów obok siebie), a `cut` w regule `sentence_map` kończy fragment, np. na punkcie „2.” listy zaskarżonych czynności. Zobacz `config/classes/odwolanie.yaml` jako pełny przykład.
 
 ## Jakość
 
@@ -133,6 +135,8 @@ Ewaluacja liczy F1 dokładnie według definicji UZP: TP = wartość zgodna (dłu
 | 12 z tych spraw zamienionych na skany 150 dpi, OCR Tesseract | same reguły, bez LLM | 0.963 |
 | j.w., zapasowy OCR RapidOCR (bez Tesseract) | same reguły, bez LLM | 0.915 |
 | 8 spraw jako skany 150 dpi w skali szarości, RapidOCR | same reguły, bez LLM | 0.933 (przed poprawkami skanów: 0.911) |
+| 60 spraw jako skany 150 dpi, Tesseract `pol` | same reguły, bez LLM | 0.984 (przed odczytem kolumn: 0.953) |
+| skany UZP `dane/skany` (10 odwołań, 10 pełnomocnictw, 10 przelewów, inne szablony) | same reguły, bez LLM | 0.875, klasyfikacja 30/30 (na starcie: 0.750) |
 | klasyfikacja 60 spraw + 16 dokumentów negatywnych UZP | | 196/196 |
 | podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wzór) i dokument z mylącą nazwą pliku | testy `tests/test_robustness.py` | wszystkie `{}` / właściwa klasa |
 | 60 spraw treningowych | reguły + mistral-small-3.2-24b | 0.9988 |

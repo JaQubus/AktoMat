@@ -83,7 +83,7 @@ def _cast(v, cast):
     if v is None or not cast:
         return v
     try:
-        return {"int": int, "float": float, "str": str}[cast](v)
+        return {"int": int, "float": float, "str": str, "abs": lambda x: abs(float(x))}[cast](v)
     except (ValueError, TypeError):
         return v
 

@@ -134,13 +134,14 @@ fields:
     prefer: llm
     description: Id powodu odwołania 1-12 ze słownika powody, wyłącznie na podstawie pierwszej zaskarżonej czynności.
     rules:
-      - &czynnosc
+      # "wnoszę odwołanie wobec: 1. <czynność> ... 2. ..." - liczy się tylko punkt 1
+      - &wobec
         kind: sentence_map
-        anchor: 'Zamawiający\s+w\s+dniu\s+(?P<v>\d{1,2}(?:\.\d{1,2}\.|\s+[a-ząćęłńóśźż]+\s+)\d{4})'
-        skip: 'wezwał|wzywał|wezwania'
-        window: 450
+        anchor: 'wnosz\w*\s+odwołanie\s+(?:wobec|od)\s*:\s*(?:1|l|I|4)[.)]\s*'
+        cut: '\n\s*(?:2|Z)[.)]\s|Zaskarżon\w*\s+czynnoś'
+        window: 600
         flags: i
-        map:
+        map: &mapa
           - {pattern: 'zaniecha\w*\s+unieważni|nie\s+unieważni', value: 10}
           - {pattern: 'unieważni', value: 9}
           - {pattern: 'zaniecha\w*\s+wyklucz|nie\s+wykluczy', value: 8}
@@ -153,6 +154,13 @@ fields:
           - {pattern: 'opis\w*\s+przedmiotu\s+zamówienia|\bOPZ\b', value: 11}
           - {pattern: 'specyfikac|\bSWZ\b|ogłoszeni\w*\s+o\s+zamówieniu', value: 4}
           - {pattern: 'wyb[oó]r\w*|wybra\w+|wyniku\s+postępowania', value: 2}
+      - &czynnosc
+        kind: sentence_map
+        anchor: 'Zamawiający\s+w\s+dniu\s+(?P<v>\d{1,2}(?:\.\d{1,2}\.|\s+[a-ząćęłńóśźż]+\s+)\d{4})'
+        skip: 'wezwał|wzywał|wezwania'
+        window: 450
+        flags: i
+        map: *mapa
 
   - path: OdwolanieKIO.czynnosc_dzien
     type: date
@@ -160,6 +168,8 @@ fields:
     rules:
       - <<: *czynnosc
         return: match
+      - pattern: 'Informacj\w*\s+o\s+za.?skarżon\w*\s+czynnoś\w*\s+został\w*\s+[^\n]{0,60}?w\s+dniu\s+(?P<v>\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4})'
+      - pattern: 'wnosz\w*\s+odwołanie\s+wobec\s*:\s*(?:1|l|I|4)[.)]\s(?:(?!\n\s*2[.)])[\s\S]){0,300}?w\s+dniu\s+(?P<v>\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4})'
 
   - path: OdwolanieKIO.czynnosc_opis
     type: string
