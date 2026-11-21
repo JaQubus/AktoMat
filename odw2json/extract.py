@@ -1,6 +1,6 @@
 """Łączenie reguł i LLM w jeden wynik zgodny z szablonem klasy, ze śladem pochodzenia każdego pola.
 
-Polityka wyboru wartości dla pola (konfigurowalna `prefer` w YAML):
+Polityka wyboru wartości dla pola (konfigurowalna `prefer` w YAML: przy polu albo na poziomie klasy):
   prefer: llm   (domyślnie) - wartość LLM, jeśli ma poprawny format i występuje w tekście;
                               w przeciwnym razie wartość z reguł; w przeciwnym razie null.
   prefer: rules              - wartość z reguł, a gdy jej brak: zweryfikowana wartość LLM.
