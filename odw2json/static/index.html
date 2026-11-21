@@ -605,7 +605,7 @@ function renderStart() {
     ${sessionsHtml()}
   </div>`;
   bindSessions();
-  $$("[data-pick]").forEach(b => b.onclick = () => $("#" + b.dataset.pick).click());
+  $$("[data-pick]").forEach(b => b.onclick = () => { S.addTo = null; S.replaceItem = null; $("#" + b.dataset.pick).click(); });
   $$("tr[data-case]").forEach(r => r.onclick = () => go("sprawa", { caseName: r.dataset.case }));
   const drop = $("#drop");
   drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
@@ -639,7 +639,10 @@ const queue = []; let running = 0, total = 0, done = 0, firstCase = null;
 function intake(list) {
   const ok = list.filter(x => /\.(pdf|zip)$/i.test(x.file.name));
   if (list.length - ok.length) say(`Pominięto ${list.length - ok.length} plików, które nie są PDF ani ZIP.`);
+  const addTo = S.addTo, replace = S.replaceItem; S.addTo = null; S.replaceItem = null;
+  if (replace && ok.length) { const i = S.items.indexOf(replace); if (i >= 0) S.items.splice(i, 1); }
   ok.forEach(x => {
+    if (addTo && !/\.zip$/i.test(x.file.name)) x = { ...x, rel: `${addTo}/${x.file.name}` };
     const isZip = /\.zip$/i.test(x.file.name), parts = x.rel.split("/").filter(Boolean);
     const it = { plik: x.file.name, sprawa: isZip ? x.file.name.replace(/\.zip$/i, "") : (parts.length > 1 ? parts[parts.length - 2] : "bez sprawy"), pending: true, zip: isZip, edits: {}, ok: {} };
     S.items.push(it); queue.push({ it, x }); total++;
@@ -647,14 +650,39 @@ function intake(list) {
   });
   drawNav(); render(); pump();
 }
+// Zerwane połączenie (np. restart serwera): do 3 prób z odstępem 2 s i 5 s, zanim dokument dostanie błąd.
+async function postExtract(x, tries = 3) {
+  for (let i = 0; ; i++) {
+    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel);
+    try {
+      const r = await fetch("/api/extract", { method: "POST", body: fd });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
+    } catch (e) {
+      if (!(e instanceof TypeError) || i >= tries - 1) throw e;
+      await new Promise(res => setTimeout(res, i ? 5000 : 2000));
+    }
+  }
+}
+function retryItem(it) {
+  if (!it._retry) return;
+  Object.assign(it, { pending: true, blad: null }); queue.push({ it, x: it._retry }); total++;
+  drawNav(); render(); pump();
+}
+function removeItem(it) {
+  const i = S.items.indexOf(it); if (i < 0) return;
+  S.items.splice(i, 1);
+  logEntry(it, "(dokument)", "usunięto z teczki", it.plik, null);
+  recheck(it.sprawa); drawNav();
+  go(caseItems(it.sprawa).length ? "sprawa" : "start", { caseName: it.sprawa });
+}
 function pump() {
   progress();
   while (running < 3 && queue.length) {
     const { it, x } = queue.shift(); running++;
-    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel);
-    fetch("/api/extract", { method: "POST", body: fd }).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    postExtract(x)
       .then(res => place(it, res))
-      .catch(e => Object.assign(it, { pending: false, blad: "Błąd połączenia: " + e.message }))
+      .catch(e => Object.assign(it, { pending: false, blad: "Błąd połączenia z serwerem AktoMat: " + e.message, _retry: x }))
       .finally(() => {
         running--; done++; progress();
         const finished = running + queue.length === 0;
@@ -791,7 +819,7 @@ function renderCase() {
     </div>
   </div>`;
   $$("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
-  $$("[data-pick]").forEach(b => b.onclick = () => $("#" + b.dataset.pick).click());
+  $$("[data-pick]").forEach(b => b.onclick = () => { S.addTo = name; S.replaceItem = null; $("#" + b.dataset.pick).click(); });
   $$("tr[data-doc]").forEach(r => { const open = () => go("dokument", { item: its[+r.dataset.doc] }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
   $$("a[data-case]").forEach(a => a.onclick = (e) => { e.preventDefault(); go("sprawa", { caseName: a.dataset.case }); });
   $("#zipCase").onclick = () => downloadZip(its, `aktomat_${name}.zip`);
@@ -885,7 +913,15 @@ function renderPanel() {
 function renderPanelInner() {
   const it = S.current, p = $("#panel");
   if (it.pending) { p.innerHTML = `<div class="empty"><span class="spinner"></span><h3>Trwa analiza dokumentu</h3></div>`; return; }
-  if (it.blad) { p.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p></div>`; return; }
+  if (it.blad) {
+    p.innerHTML = `<div class="alert bad"><h3>Nie udało się przetworzyć pliku</h3><p>${esc(it.blad)}</p>
+      <p style="margin-top:8px">${it._retry ? "Najczęściej to chwilowa przerwa w działaniu serwera. Spróbuj ponownie." : "Plik nie został zapisany w sesji. Wczytaj go jeszcze raz albo usuń tę pozycję z teczki."}</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${it._retry ? '<button class="btn primary" type="button" id="retry">Spróbuj ponownie</button>' : '<button class="btn primary" type="button" data-pick="pickFiles">Wczytaj plik ponownie</button>'}<button class="btn" type="button" id="rmItem">Usuń z teczki</button></div></div>`;
+    $("#retry") && ($("#retry").onclick = () => retryItem(it));
+    $("#rmItem").onclick = () => removeItem(it);
+    $$("#panel [data-pick]").forEach(b => b.onclick = () => { S.addTo = it.sprawa; S.replaceItem = it; $("#" + b.dataset.pick).click(); });
+    return;
+  }
   const t = it.slad || {}, conf = confidence(it), c = counts(it);
   const maxPts = Math.max(1, ...Object.values(conf.pts || {}), ...Object.values(conf.thr || {}).map(x => x * 2));
   const bars = (conf.sorted || []).map(([n, v]) => { const thr = conf.thr?.[n] ?? 5; return `<div class="bar ${n === it.klasa ? "win" : ""}"><span>${esc(kindLabel(n))}</span><span class="track" role="img" aria-label="${esc(kindLabel(n))}: ${v} pkt, próg ${thr}"><span class="fill" style="width:${Math.max(0, v) / maxPts * 100}%"></span><span class="thr" style="left:${thr / maxPts * 100}%"></span></span><span class="v">${v} pkt</span></div>`; }).join("");
