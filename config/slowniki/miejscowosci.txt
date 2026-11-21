@@ -1,0 +1,77 @@
+# Miejscowości z polskimi znakami. Gdy OCR zgubi ogonki ("Krakow"), wartość pola z `vocabulary`
+# zamieniana jest na zapis ze słownika ("Kraków"). Jedna nazwa na linię; dopisuj bez zmian w kodzie.
+Białystok
+Bielsko-Biała
+Biała Podlaska
+Bełchatów
+Bolesławiec
+Chełm
+Chorzów
+Częstochowa
+Dąbrowa Górnicza
+Gdańsk
+Giżycko
+Głogów
+Gniezno
+Gorzów Wielkopolski
+Grudziądz
+Jastrzębie-Zdrój
+Jelenia Góra
+Kędzierzyn-Koźle
+Kłodzko
+Konstantynów Łódzki
+Koszalin
+Kraków
+Kraśnik
+Krosno
+Łomża
+Łódź
+Łowicz
+Łuków
+Mińsk Mazowiecki
+Mysłowice
+Nowy Sącz
+Nowy Targ
+Oświęcim
+Ostrów Mazowiecka
+Ostrów Wielkopolski
+Ostrowiec Świętokrzyski
+Piaseczno
+Piotrków Trybunalski
+Płock
+Poznań
+Pruszków
+Przemyśl
+Racibórz
+Radom
+Ruda Śląska
+Rybnik
+Rzeszów
+Siedlce
+Siemianowice Śląskie
+Skarżysko-Kamienna
+Słupsk
+Sosnowiec
+Starogard Gdański
+Suwałki
+Szczecin
+Świdnica
+Świętochłowice
+Świnoujście
+Tarnów
+Tczew
+Toruń
+Tychy
+Wałbrzych
+Włocławek
+Wodzisław Śląski
+Wołomin
+Wrocław
+Zabrze
+Zamość
+Zawiercie
+Zduńska Wola
+Zielona Góra
+Żary
+Żory
+Żyrardów

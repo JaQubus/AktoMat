@@ -13,7 +13,7 @@ import copy
 import re
 
 from . import paths
-from .config import DocClass, FieldSpec
+from .config import DocClass, FieldSpec, load_vocabulary
 from .normalize import digits, fold, grounded, locate, normalize
 from .rules import Hit, apply_rules, split_blocks
 
@@ -135,10 +135,27 @@ def _page_of(snippet: str, pages: list[str]) -> int | None:
     return None
 
 
+_VOCABS: dict = {}
+
+
+def _vocab(spec) -> dict:
+    key = spec if isinstance(spec, str) else tuple(spec)
+    if key not in _VOCABS:
+        _VOCABS[key] = load_vocabulary(spec)
+    return _VOCABS[key]
+
+
+def _n_diacritics(s: str) -> int:
+    return sum(1 for c in s if c in "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ")
+
+
 def _derive(spec: FieldSpec, result, path: str, cls: DocClass):
     d = spec.derive
     idx = _indices(path)
-    src = paths.get(result, _bind(d["from"], idx)) if d.get("from") else None
+    srcs = d.get("from") or []
+    srcs = [srcs] if isinstance(srcs, str) else srcs
+    vals = [paths.get(result, _bind(s, idx)) for s in srcs]
+    src = next((v for v in vals if v not in (None, "", [])), None)   # pierwsza niepusta z listy źródeł
     kind = d.get("kind")
     if kind == "enum_label":
         return cls.enums.get(d["enum"], {}).get(normalize(src, "int")) if src is not None else None
@@ -225,9 +242,18 @@ def extract(doc, cls: DocClass, llm_json: dict | None, llm_error: str | None = N
             else:
                 order = [("LLM", v_llm if ok_llm else None), ("reguły", v_rule)]
             source, value = next(((s, v) for s, v in order if v is not None), ("brak", f.default))
+            if (source == "reguły" and ok_llm and isinstance(value, str) and isinstance(v_llm, str)
+                    and fold(v_llm) == fold(value) and _n_diacritics(v_llm) > _n_diacritics(value)):
+                # ta sama wartość, ale LLM odtworzył polskie znaki zgubione przez OCR
+                source, value = "reguły (znaki z LLM)", v_llm
             if (v_llm is not None and v_rule is not None and ok_llm
                     and fold(str(v_llm)) != fold(str(v_rule))):
                 notes.append(f"rozbieżność LLM={v_llm!r} vs reguły={v_rule!r}")
+            if isinstance(value, str) and f.vocabulary:
+                canon = _vocab(f.vocabulary).get(fold(value))
+                if canon and canon != value:
+                    notes.append(f"zapis ze słownika: {value!r} -> {canon!r}")
+                    value = canon
             value = _cast(value, f.cast)
             paths.set_(result, path, value)
             if source == "reguły" and hit and hit.evidence:

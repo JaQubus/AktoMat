@@ -34,6 +34,18 @@ class FieldSpec:
     require_grounding: bool = True  # wartość musi występować w tekście
     default: object = None
     cast: str | None = None        # wymuszenie typu w JSON: str | int | float
+    vocabulary: str | list | None = None  # słownik poprawnych zapisów (lista albo plik w config/), np. miejscowości z ogonkami
+
+
+def load_vocabulary(spec) -> dict:
+    """Słownik zapisów kanonicznych: klucz = forma bez ogonków i wielkości liter."""
+    from .normalize import fold
+    if not spec:
+        return {}
+    items = spec if isinstance(spec, list) else [
+        ln.strip() for ln in (CONFIG_DIR / spec).read_text(encoding="utf-8").splitlines()
+        if ln.strip() and not ln.lstrip().startswith("#")]
+    return {fold(x): x for x in items}
 
 
 @dataclass

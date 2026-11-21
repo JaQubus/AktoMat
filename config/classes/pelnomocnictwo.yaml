@@ -8,7 +8,7 @@ prefer: rules
 classify:
   min_score: 5
   filename_hints: [pelnomoc, pełnomoc]
-  filename_weight: 1
+  filename_weight: 0   # UZP: nie sugerować się nazwą pliku (bywają podróbki); podpowiedź tylko w śladzie
   keywords:
     - {pattern: 'p\s?e\s?l\s?n\s?o\s?m\s?o\s?c\s?n\s?i\s?c\s?t\s?w\s?o', weight: 3}
     - {pattern: 'mocodawc', weight: 3}
@@ -16,6 +16,7 @@ classify:
     - {pattern: 'pelnomocnictwo przyjmuje|umocowan', weight: 2}
     - {pattern: 'upowazniam|upowaznia\w*|do reprezentowania', weight: 2}
   negative:
+    - {pattern: 'wzor (pelnomocnictwa|potwierdzenia)|\[\s*(nazwa|imie|adres|data|kwota)\b', weight: 8}
     - {pattern: 'zarzut nr|zarzuca(m|my)? zamawiajac', weight: 3}
     - {pattern: 'wnosze odwolanie|wnosze o uwzglednienie', weight: 3}
     - {pattern: 'potwierdzenie (wykonania )?(przelewu|operacji)|rachunek (nadawcy|odbiorcy|zleceniodawcy)', weight: 4}
