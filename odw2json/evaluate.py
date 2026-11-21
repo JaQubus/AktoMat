@@ -72,6 +72,10 @@ def compare(pred: dict | None, gt: dict) -> list[tuple[str, str, object, object]
     return out
 
 
+def _acc(c) -> str:
+    return f"{c[0] / c[1]:.4f} ({c[0]}/{c[1]})" if c[1] else "-"
+
+
 def f1(c: dict) -> float:
     d = 2 * c["TP"] + c["FP"] + c["FN"]
     return 2 * c["TP"] / d if d else 1.0
@@ -94,6 +98,8 @@ def run_eval(gt_dir: Path, pred_dir: Path | None, report_dir: Path, use_llm=None
     per_class = defaultdict(lambda: defaultdict(int))
     per_field = defaultdict(lambda: defaultdict(int))
     errors, cls_ok, cls_all, cls_errors = [], 0, 0, []
+    exact = defaultdict(lambda: [0, 0])      # klasa -> [pola identyczne co do znaku, wszystkie pola]
+    files_same, files_all = 0, 0             # pliki JSON identyczne ze wzorcem
     for case in sorted(p for p in gt_dir.iterdir() if p.is_dir()):
         preds = {}
         for pdf in sorted(case.glob("*.pdf")):
@@ -126,7 +132,13 @@ def run_eval(gt_dir: Path, pred_dir: Path | None, report_dir: Path, use_llm=None
         for gj in sorted(case.glob("*.json")):
             klass = gj.stem
             gt = json.loads(gj.read_text(encoding="utf-8"))
+            files_all += 1
+            files_same += preds.get(klass) == gt
             for path, r, v, g in compare(preds.get(klass), gt):
+                same = (_empty(v) and _empty(g)) or v == g
+                for key in (klass, "*"):
+                    exact[key][0] += same
+                    exact[key][1] += 1
                 total[r] += 1
                 per_class[klass][r] += 1
                 per_field[f"{klass}:{paths.generic(path)}"][r] += 1
@@ -138,10 +150,14 @@ def run_eval(gt_dir: Path, pred_dir: Path | None, report_dir: Path, use_llm=None
     report_dir.mkdir(parents=True, exist_ok=True)
     lines = ["# Raport jakości ekstrakcji", "",
              f"**F1 = {f1(total):.4f}**  (TP={total['TP']}, FP={total['FP']}, FN={total['FN']}, TN={total['TN']})",
-             f"Klasyfikacja: {cls_ok}/{cls_all} poprawnie", "", "## Per klasa", "",
-             "| klasa | F1 | TP | FP | FN | TN |", "|---|---|---|---|---|---|"]
+             f"Klasyfikacja: {cls_ok}/{cls_all} poprawnie",
+             f"Dokładność ścisła (wartość identyczna co do znaku): {_acc(exact['*'])}; "
+             f"pliki JSON identyczne ze wzorcem: {files_same}/{files_all}",
+             "", "## Per klasa", "",
+             "| klasa | F1 | TP | FP | FN | TN | dokładność ścisła |", "|---|---|---|---|---|---|---|"]
     for k, c in sorted(per_class.items()):
-        lines.append(f"| {k} | {f1(c):.3f} | {c['TP']} | {c['FP']} | {c['FN']} | {c['TN']} |")
+        acc = _acc(exact[k]) if k in exact else "-"
+        lines.append(f"| {k} | {f1(c):.3f} | {c['TP']} | {c['FP']} | {c['FN']} | {c['TN']} | {acc} |")
     lines += ["", "## Per pole (najsłabsze na górze)", "",
               "| pole | F1 | TP | FP | FN | TN |", "|---|---|---|---|---|---|"]
     for k, c in sorted(per_field.items(), key=lambda kv: f1(kv[1])):
@@ -155,9 +171,11 @@ def run_eval(gt_dir: Path, pred_dir: Path | None, report_dir: Path, use_llm=None
         w.writerows(errors)
     summary = {"f1": round(f1(total), 4), **total,
                "per_klasa": {k: round(f1(c), 4) for k, c in per_class.items()},
-               "klasyfikacja": f"{cls_ok}/{cls_all}"}
+               "klasyfikacja": f"{cls_ok}/{cls_all}",
+               "dokladnosc_scisla": round(exact["*"][0] / exact["*"][1], 4) if exact["*"][1] else None,
+               "pliki_identyczne": f"{files_same}/{files_all}"}
     (report_dir / "wynik.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    print("\n".join(lines[:5 + len(per_class) + 4]))
+    print("\n".join(lines[:6 + len(per_class) + 4]))
     print(f"\nPełny raport: {report_dir / 'raport.md'}, błędy: {report_dir / 'bledy.csv'}")
     if tmp:
         shutil.copytree(tmp / "trace", report_dir / "trace", dirs_exist_ok=True)
