@@ -1,4 +1,4 @@
-# Odwołania2JSON (HackNation 2026, wyzwanie UZP)
+# AktoMat (HackNation 2026, wyzwanie UZP: Odwołania2JSON)
 
 PDF (odwołanie / pełnomocnictwo / potwierdzenie przelewu) → JSON zgodny ze schematami z https://github.com/Urzad-Zamowien-Publicznych/hacknation-2026 (`oczekiwane-json/`). Ocena: F1 per pole na ukrytym zbiorze realnych spraw (także skany).
 
