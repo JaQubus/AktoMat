@@ -5,6 +5,9 @@ enabled: true
 # Domyślne źródło wartości pól: reguły (zweryfikowane), LLM uzupełnia braki. Pole może nadpisać prefer: llm.
 prefer: rules
 
+# Skan: bloki podpisów i nagłówek "Mocodawca | Pełnomocnik" stoją obok siebie - czytaj kolumnami.
+ocr_layout: columns
+
 classify:
   min_score: 5
   filename_hints: [pelnomoc, pełnomoc]
@@ -36,6 +39,11 @@ output_template:
       pesel: null
 
 sections:
+  ustanowieni:   # "niniejszym udziela pełnomocnictwa: 1. Jan Kowalski — adwokat ... do reprezentowania"
+    start: 'udziela\w*\s+pełnomocnictwa\s*:'
+    end: 'do\s+reprezentowania|w\s+sprawie|w\s+postępowaniu'
+    flags: i
+    max_chars: 600
   podpisy_wszystkie: {start: '\A', end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo', flags: i}
   mocodawca:
     start: '\A'
@@ -109,12 +117,18 @@ fields:
       - {kind: signatories, mode: dots, end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo|Pełnomocni(?:k|cy)\s*:'}
       - {kind: signatories, start: '(?m)^\s*(?:Mocodawca|Za Mocodawcę|W imieniu Mocodawcy|W imieniu [^\n]{3,120}|Podpis\w* Mocodawc\w*|Mocodawca/podpis\w*)\s*:?\s*$', end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo|Pełnomocni(?:k|cy)\s*:', last: true}
       - {pattern: 'Ja,?\s+niżej\s+podpisan\w*\s*:?\s*(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)', flags: ''}
+      # "reprezentowana przez: Jan Kowalski — Prezes Zarządu" (podpis elektroniczny, bez bloku podpisów)
+      - {pattern: 'reprezentowan\w*\s+przez\W{0,4}(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)\s*[—–-]', all: true, flags: ''}
+      # skan: OCR nie czyta linii kropek - osoba z funkcją w linii pod spodem
+      - {kind: signatories, mode: role_below, end: 'Pełnomocnictwo przyjmuję|Przyjmuję pełnomocnictwo|Pełnomocni(?:k|cy)\s*:'}
 
   - path: 'pelnomocnicy[*].imie_nazwisko'
     type: person
     description: Imię i nazwisko pełnomocnika w mianowniku, bez tytułu.
     rules:
       - {kind: titled_persons, all: true}
+      # lista po "udziela pełnomocnictwa:" (także bez tytułu przed nazwiskiem)
+      - {pattern: '(?:^|\n|oraz\s+|,\s+|\d[.)]\s*)(?P<v>[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż-]+)(?=\s*(?:[—–(,-]|\n|$|oraz\b))', section: ustanowieni, all: true, flags: ''}
 
   - path: 'pelnomocnicy[*].pesel'
     type: pesel

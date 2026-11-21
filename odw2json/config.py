@@ -61,6 +61,7 @@ class DocClass:
     list_templates: dict           # "Odwolujacy" -> szablon elementu listy
     source: Path
     lists: dict = field(default_factory=dict)  # podział sekcji na bloki = elementy listy (wiele podmiotów)
+    ocr_layout: str | None = None  # odczyt skanu: None = wierszami, "columns" = kolumny jedna po drugiej
 
     def field(self, path: str) -> FieldSpec | None:
         return next((f for f in self.fields if f.path == path), None)
@@ -73,7 +74,20 @@ def load_settings() -> dict:
     llm = s.setdefault("llm", {})
     llm["base_url"] = os.environ.get("LLM_BASE_URL", llm.get("base_url"))
     llm["model"] = os.environ.get("LLM_MODEL", llm.get("model"))
-    llm["api_key"] = os.environ.get("LLM_API_KEY") or os.environ.get("GROQ_API_KEY")
+    llm["api_key"] = os.environ.get("LLM_API_KEY")
+    # LLM_PROFILE=groq -> GROQ_BASE_URL / GROQ_MODEL / GROQ_API_KEY (domyślne z settings.yaml llm.profiles.groq);
+    # zwykłe LLM_* zostają w .env obok i wracają po usunięciu LLM_PROFILE.
+    name = (os.environ.get("LLM_PROFILE") or "").strip()
+    if name:
+        prof = dict((llm.get("profiles") or {}).get(name.lower(), {}))
+        env = lambda k: os.environ.get(f"{name.upper()}_{k}")
+        # pozostałe klucze profilu (np. max_tokens, max_doc_chars pod limity darmowego planu) nadpisują llm
+        llm.update({k: v for k, v in prof.items() if k not in ("base_url", "model", "api_key")})
+        llm["base_url"] = env("BASE_URL") or prof.get("base_url") or llm["base_url"]
+        llm["model"] = env("MODEL") or prof.get("model") or llm["model"]
+        llm["api_key"] = env("API_KEY") or llm["api_key"]
+        llm["profile"] = name.lower()
+    llm.pop("profiles", None)
     if os.environ.get("LLM_ENABLED") is not None:
         llm["enabled"] = os.environ["LLM_ENABLED"].strip() not in ("0", "false", "no", "")
     if os.environ.get("OCR_ENGINE"):
@@ -118,5 +132,6 @@ def load_classes(classes_dir: Path | None = None) -> list[DocClass]:
             list_templates=_list_templates(tpl),
             source=p,
             lists=raw.get("lists") or {},
+            ocr_layout=raw.get("ocr_layout"),
         ))
     return out
