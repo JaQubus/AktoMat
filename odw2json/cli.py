@@ -43,6 +43,8 @@ def main(argv=None):
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                         format="%(asctime)s %(levelname)s %(message)s", datefmt="%H:%M:%S")
     logging.getLogger("httpx").setLevel(logging.WARNING)
+    if sys.version_info < (3, 13):
+        logging.warning("Wymagany Python 3.13+ (jest %s.%s)", *sys.version_info[:2])
 
     cmd = args.cmd or "run"
     if cmd == "run":

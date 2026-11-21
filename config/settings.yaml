@@ -8,7 +8,7 @@ llm:
   model: gpt-oss-120b
   temperature: 0
   max_tokens: 6000
-  timeout: 180
+  timeout: 90               # sekundy na jedno zapytanie
   retries: 3
   json_mode: true
   max_doc_chars: 24000      # ile tekstu dokumentu trafia do modelu (kluczowe dane są na pierwszych stronach)
@@ -16,6 +16,12 @@ llm:
     reasoning_effort: medium
   # Profile wybierane w .env przez LLM_PROFILE=<nazwa>; klucz/URL/model z <NAZWA>_API_KEY / _BASE_URL / _MODEL.
   profiles:
+    ovh:                    # OVHcloud AI Endpoints (Francja, UE); klucz w OVH_API_KEY. gpt-oss-20b = 21B
+      base_url: https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+      model: gpt-oss-20b
+    sherlock:               # CloudFerro Sherlock (polska firma, UE); klucz w SHERLOCK_API_KEY. Model 11B = 18 pkt UZP
+      base_url: https://api-sherlock.cloudferro.com/openai/v1
+      model: speakleash/Bielik-11B-v3.0-Instruct   # albo CYFRAGOVPL/PLLuM-12B-instruct, meta-llama/Llama-3.1-8B-Instruct (20 pkt)
     groq:                   # darmowy limit, tylko do testów (firma z USA; w zgłoszeniu zostaje Scaleway)
       base_url: https://api.groq.com/openai/v1
       model: openai/gpt-oss-120b
@@ -36,5 +42,8 @@ ocr:
 
 classify_head_chars: 6000   # klasyfikacja na podstawie początku dokumentu
 workers: 4                  # równoległe dokumenty
+# UZP: 150 PDF w maks. 45 min. Po tym czasie (od startu partii) LLM jest pomijany i zostają same reguły,
+# żeby partia zawsze skończyła się w limicie. Uwaga: budżet liczy się dla całego uruchomienia `run`.
+time_budget_s: 2400
 # Dokument spoza skonfigurowanych klas: zawartość pliku .json (UZP: "pusty plik .json"); null = nie twórz pliku
 unknown_output: "{}"

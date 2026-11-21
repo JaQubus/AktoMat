@@ -57,3 +57,18 @@ def test_llm_hallucination_is_rejected(pdf, monkeypatch):
     assert r.data["przelew_bankowy"]["kwota"] == 100.0
     assert r.data["przelew_bankowy"]["z_rachunku"] == "07104462551544820625216547"  # z reguł
     assert "odrzucona" in r.trace["pola"]["przelew_bankowy.z_rachunku"]["uwagi"][0]
+
+
+def test_time_budget_skips_llm():
+    import time as _t
+
+    from odw2json.config import load_classes
+    from odw2json.llm import LLMClient, LLMError
+
+    c = LLMClient({"enabled": True, "api_key": "x", "base_url": "http://127.0.0.1:9", "model": "m"})
+    cls = load_classes()[0]
+    try:
+        c.extract(cls, "tekst", deadline=_t.time() + 1)
+        assert False, "powinien pominąć LLM"
+    except LLMError as e:
+        assert "limit czasu" in str(e)

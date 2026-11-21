@@ -39,7 +39,8 @@ class Engine:
         self.llm = LLMClient(llm_cfg)
         self.by_name = {c.name: c for c in self.classes}
 
-    def process(self, pdf: Path) -> Result:
+    def process(self, pdf: Path, deadline: float | None = None) -> Result:
+        """deadline: czas (time.time()), po którym LLM jest pomijany i zostają same reguły."""
         t0 = time.time()
         doc = load_pdf(pdf, self.settings)
         cl = classify(doc.text, pdf.name, self.classes,
@@ -57,7 +58,9 @@ class Engine:
         if self.llm.enabled:
             try:
                 max_chars = int(self.settings.get("llm", {}).get("max_doc_chars", 24000))
-                llm_json, llm_meta = self.llm.extract(cls, doc.numbered_text(max_chars))
+                text = doc.numbered_text(max_chars)
+                llm_json, llm_meta = (self.llm.extract(cls, text, deadline=deadline) if deadline
+                                      else self.llm.extract(cls, text))
             except LLMError as e:
                 llm_err = str(e)[:300]
                 log.warning("%s: LLM niedostępny, używam samych reguł", pdf.name)
@@ -89,11 +92,14 @@ def run(input_dir: Path, output_dir: Path, trace_dir: Path | None = None, use_ll
     jobs = [(case, pdf) for case, pdfs in iter_cases(input_dir) for pdf in pdfs]
     workers = workers or int(eng.settings.get("workers", 4))
     log.info("Plików PDF: %d, LLM: %s", len(jobs), "tak" if eng.llm.enabled else "NIE (tylko reguły)")
+    # UZP: 150 PDF w maks. 45 min. Po przekroczeniu budżetu LLM jest pomijany, reguły i OCR działają dalej.
+    budget = eng.settings.get("time_budget_s")
+    deadline = time.time() + float(budget) if budget else None
 
     def one(job):
         case, pdf = job
         try:
-            return case, eng.process(pdf)
+            return case, eng.process(pdf, deadline)
         except Exception as e:  # noqa: BLE001 - jeden zły plik nie zatrzymuje całej partii
             log.exception("Błąd przetwarzania %s", pdf)
             return case, Result(pdf, None, None, {"blad": str(e)})

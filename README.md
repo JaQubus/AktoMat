@@ -60,8 +60,15 @@ Konfiguracja w `.env` (szablon: `.env.example`), domyślnie:
 | `LLM_MODEL` | `gpt-oss-120b` | model open-weight (Apache 2.0) |
 | `LLM_ENABLED` | `1` | `0` = tylko reguły |
 | `TESSERACT_CMD` | z PATH | ścieżka do `tesseract.exe` |
+| `TESSDATA_PREFIX` | instalacja Tesseracta albo `./tessdata` | folder z `pol.traineddata`; `start.bat` sam go pobiera do `./tessdata`, gdy Tesseract nie ma polskiego |
 
 Domyślny dostawca to **Scaleway Generative APIs (Paryż, UE)**, zgodnie z wymogiem FAQ: usługodawca i serwer w UE, model z możliwością instalacji lokalnej. Ten sam kod działa z lokalnym serwerem (vLLM, Ollama) po zmianie `LLM_BASE_URL` i `LLM_MODEL`. Gdy LLM jest niedostępny, aplikacja nie przerywa pracy: zwraca wynik z reguł i zapisuje błąd w śladzie.
+
+**Profile dostawców.** Zamiast przepisywać `LLM_*`, w `.env` można dopisać `LLM_PROFILE=<nazwa>` i klucz `<NAZWA>_API_KEY`. Profile są w `config/settings.yaml` (`llm.profiles`): `ovh` (OVHcloud AI Endpoints, UE, `gpt-oss-20b`), `sherlock` (CloudFerro, UE, Bielik 11B / PLLuM 12B / Llama 3.1 8B), `groq` (tylko testy). Model profilu można nadpisać przez `<NAZWA>_MODEL`.
+
+**Klucz API dla jury.** `.env` nie trafia do repozytorium. Do zgłoszenia klucz przekazujemy osobno; wystarczy wpisać go do `.env` (np. `LLM_PROFILE=ovh` i `OVH_API_KEY=...`) i uruchomić `start.bat`. Bez klucza aplikacja działa na samych regułach.
+
+**Limit czasu UZP (150 PDF w 45 min).** `time_budget_s` w `config/settings.yaml` (domyślnie 2400 s = 40 min): gdy partia przekroczy budżet, LLM jest pomijany i pozostałe dokumenty są liczone samymi regułami, więc wynik zawsze powstaje w limicie. Pojedyncze zapytanie do LLM ma limit 90 s. Bez LLM 30 skanów (72 strony, OCR Tesseract) liczy się w ok. 100 s na 4 rdzeniach.
 
 Do darmowych testów i ewaluacji można użyć **Groq** (ten sam model open-weight gpt-oss-120b): w `.env` dopisz `LLM_PROFILE=groq` i `GROQ_API_KEY=gsk_...`, a linie Scaleway (`LLM_*`) zostaw. Usunięcie `LLM_PROFILE` wraca do Scaleway. Groq jest firmą z USA, więc w zgłoszeniu do UZP zostaje dostawca z UE.
 
@@ -141,8 +148,30 @@ Ewaluacja liczy F1 dokładnie według definicji UZP: TP = wartość zgodna (dłu
 | podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wzór) i dokument z mylącą nazwą pliku | testy `tests/test_robustness.py` | wszystkie `{}` / właściwa klasa |
 | 60 spraw treningowych | reguły + mistral-small-3.2-24b | 0.9988 |
 | j.w. | reguły + LLM (gpt-oss-120b) | 0.9995 |
+| skany UZP `dane/skany` (30) | reguły + gpt-oss-120b (117B) | 0.937 |
+| j.w. | reguły + **gpt-oss-20b (21B)** | **0.949** |
+| j.w. | reguły + Qwen 3.8 27B | 0.942 |
+| j.w. | reguły + ALLaM 7B | 0.801 (gorzej niż same reguły) |
+
+Na skanach mniejszy model daje tyle samo co duży, bo LLM tylko uzupełnia pola, których nie złapały reguły, a każda jego wartość jest weryfikowana w tekście. Raport pokazuje też **ścisłą dokładność** (wartość identyczna co do znaku): na 60 sprawach treningowych 180/180 plików JSON jest identycznych ze wzorcem.
 
 Wynik na danych treningowych jest optymistyczny, bo reguły były strojone na tych samych szablonach. Prawdziwe odwołania są pisane swobodnie i tam główną robotę wykonuje LLM, a reguły działają jako weryfikacja i zapas.
+
+## Zgodność z wymaganiami UZP
+
+| wymaganie (README UZP) | jak spełnione |
+|---|---|
+| PDF → rozpoznanie typu → JSON wg `oczekiwane-json` | klasy w `config/classes/*.yaml`, `output_template` 1:1 ze wzorcami |
+| klasyfikacja po treści, nie po nazwie pliku | `filename_weight: 0`, test `test_filename_does_not_decide_class` |
+| dokument spoza klas → pusty `.json` | plik z `{}` (`unknown_output`), 16/16 negatywów UZP |
+| foldery `input/` i `output/` w katalogu głównym, JSON o tej samej nazwie co PDF, drzewo spraw | `python -m odw2json` / `start.bat` czyta `input/<sprawa>/*.pdf`, pisze `output/<sprawa>/<plik>.json` |
+| CLI / wrapper script, GUI dodatkowo | `start.bat`, `start.sh`, `python -m odw2json web` |
+| Python 3.13+, `requirements.txt` | tak (CLI ostrzega przy starszym Pythonie) |
+| tylko open source, bez GPU, LLM po API z UE, klucz dostarczony | modele open-weight, profile `ovh` / `sherlock` / Scaleway; klucz w `.env` |
+| skany | OCR lokalny (Tesseract `pol`, zapasowo RapidOCR), więc OCR nie liczy się jako model z API |
+| 150 PDF w 45 min | budżet czasu `time_budget_s`, potem same reguły |
+| nowe klasy bez zmian w kodzie | tylko YAML (sekcja niżej) |
+| transparentność | ślad `trace/` per pole + GUI z podświetleniem źródła |
 
 ## Struktura projektu
 
