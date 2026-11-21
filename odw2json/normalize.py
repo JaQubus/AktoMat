@@ -150,7 +150,25 @@ def n_regon(v):
     return d if len(d) in (9, 14) else None
 
 
+# Długości IBAN w krajach UE/EOG i kilku częstych (kod kraju -> liczba znaków)
+_IBAN_LEN = {"AT": 20, "BE": 16, "BG": 22, "CH": 21, "CY": 28, "CZ": 24, "DE": 22, "DK": 18, "EE": 20, "ES": 24,
+             "FI": 18, "FR": 27, "GB": 22, "GR": 27, "HR": 21, "HU": 28, "IE": 22, "IS": 26, "IT": 27, "LI": 21,
+             "LT": 20, "LU": 20, "LV": 21, "MT": 31, "NL": 18, "NO": 15, "PT": 25, "RO": 24, "SE": 24, "SI": 19,
+             "SK": 24, "UA": 29}
+
+
+def _iban_ok(iban: str) -> bool:
+    r = iban[4:] + iban[:4]
+    return int("".join(str(int(c, 36)) for c in r)) % 97 == 1
+
+
 def n_account(v):
+    """Polski rachunek: 26 cyfr bez "PL" (tak zapisuje wzorzec UZP, także gdy dokument pokazuje IBAN z PL).
+    Rachunek zagraniczny: pełny IBAN z kodem kraju (np. DE89...), tylko gdy suma kontrolna się zgadza."""
+    raw = re.sub(r"[\s-]", "", str(v or "")).upper()
+    m = re.search(r"\b([A-Z]{2})(\d{2}[A-Z0-9]{11,30})\b", raw)
+    if m and m.group(1) not in ("PL", "NR") and _IBAN_LEN.get(m.group(1)) == len(m.group(0)) and _iban_ok(m.group(0)):
+        return m.group(0)
     d = digits(v)
     return d if len(d) == 26 else None
 

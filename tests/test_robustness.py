@@ -148,3 +148,10 @@ def test_signatories_without_dotted_line():
     from odw2json.rules import r_signatories
     hit = r_signatories({"mode": "role_below"}, "postępowaniu.\nEwa Szulc\nmiejsce na pieczęć firmową\nProkurent\n")
     assert hit.value == ["Ewa Szulc"]
+
+
+def test_account_formats():
+    # wzorzec UZP: polski rachunek jako 26 cyfr bez "PL"; zagraniczny IBAN zostaje z kodem kraju
+    assert normalize("PL61 1090 1014 0000 0712 1981 2874", "account") == "61109010140000071219812874"
+    assert normalize("DE89 3704 0044 0532 0130 00", "account") == "DE89370400440532013000"
+    assert normalize("DE89 3704 0044 0532 0130 01", "account") is None  # zła suma kontrolna
