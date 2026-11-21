@@ -11,18 +11,22 @@
 #   wyklucz     - regex, który dyskwalifikuje dokument
 #   gdy         - wymóg tylko gdy: {jest: <klasa>} albo {klasa, pole, rowne}
 #   poziom      - brak (brak formalny) | ostrzezenie
+#   wezwanie    - jak ta pozycja brzmi w piśmie o uzupełnienie braków (config/pisma.yaml, zmienna {braki})
 wymagane:
   - id: odwolanie
     opis: Odwołanie
     klasa: odwolanie
+    wezwanie: przedłożenia odwołania
     poziom: brak
   - id: pelnomocnictwo
     opis: Pełnomocnictwo dla pełnomocnika wskazanego w odwołaniu
+    wezwanie: przedłożenia pełnomocnictwa dla osoby, która podpisała odwołanie w imieniu Odwołującego
     klasa: pelnomocnictwo
     gdy: {klasa: odwolanie, pole: "Odwolujacy[*].przez-pelnomocnika", rowne: 1}
     poziom: brak
   - id: wpis
     opis: Dowód uiszczenia wpisu od odwołania
+    wezwanie: przedstawienia dowodu uiszczenia wpisu od odwołania
     klasa: przelew
     pole: przelew_bankowy.tytul
     wzorzec: '\bwpis'
@@ -30,6 +34,7 @@ wymagane:
     poziom: brak
   - id: oplata_skarbowa
     opis: Dowód uiszczenia opłaty skarbowej od pełnomocnictwa
+    wezwanie: przedstawienia dowodu uiszczenia opłaty skarbowej od pełnomocnictwa
     klasa: przelew
     pole: przelew_bankowy.tytul
     wzorzec: 'skarbow'
@@ -51,11 +56,13 @@ pola:
 zgodnosc:
   - id: pelnomocnik
     opis: Pełnomocnik z odwołania ma pełnomocnictwo
+    wezwanie: przedłożenia pełnomocnictwa obejmującego pełnomocnika wskazanego w odwołaniu
     a: {klasa: odwolanie, pole: "Odwolujacy[*].pelnomocnik.imie_nazwisko"}
     b: {klasa: pelnomocnictwo, pole: "pelnomocnicy[*].imie_nazwisko"}
     tryb: zawiera_sie
   - id: mocodawca
     opis: Mocodawca w pełnomocnictwie to odwołujący
+    wezwanie: przedłożenia pełnomocnictwa udzielonego przez Odwołującego
     a: {klasa: odwolanie, pole: "Odwolujacy[*].nazwa"}
     b: {klasa: pelnomocnictwo, pole: "mocodawca[*].data.nazwa"}
     tryb: rowne

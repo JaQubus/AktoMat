@@ -129,6 +129,50 @@
   .checks .ico { font-weight: 800; text-align: center; }
   .checks .skipbtn { margin-left: 8px; vertical-align: 1px; }
   .checks li.skipped > span:last-child > span:first-of-type, .skipped-row td:first-child { color: var(--muted); }
+
+  /* ---------- kalendarz ---------- */
+  .dp-wrap { position: relative; display: block; }
+  .dp-wrap > input { padding-right: 44px !important; width: 100%; box-sizing: border-box; }
+  .dp-btn { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 34px; height: 32px; border: 0; border-radius: 6px; background: transparent; color: var(--accent); cursor: pointer; display: grid; place-items: center; }
+  .dp-btn:hover { background: var(--accent-soft); }
+  .dp-btn svg { width: 18px; height: 18px; }
+  .dp { position: fixed; z-index: 1000; width: 304px; background: var(--panel); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, .22), 0 2px 6px rgba(0, 0, 0, .12); padding: 12px; font-size: 14px; animation: dpIn .12s ease-out; }
+  @keyframes dpIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .dp { animation: none; } }
+  .dp-h { display: flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+  .dp-h .t { flex: 1; text-align: center; font-weight: 700; text-transform: capitalize; }
+  .dp-h button, .dp-f button { height: 32px; min-width: 32px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+  .dp-h button:hover, .dp-f button:hover { background: var(--panel-2); border-color: var(--line); }
+  .dp-g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .dp-g .wd { text-align: center; font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: 4px 0; }
+  .dp-g .wd.we { color: var(--bad); opacity: .8; }
+  .dp-d { position: relative; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+  .dp-d:hover { background: var(--accent-soft); }
+  .dp-d.out { color: var(--muted); opacity: .55; }
+  .dp-d.we { color: var(--bad); }
+  .dp-d.hol { color: var(--bad); font-weight: 700; }
+  .dp-d.hol::after { content: ""; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--bad); }
+  .dp-d.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  .dp-d.sel { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .dp-d.sel::after { background: var(--accent-ink); }
+  .dp-d:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .dp-f { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+  .dp-f .lg { flex: 1; display: flex; align-items: center; gap: 6px; }
+  .dp-f .lg i { width: 6px; height: 6px; border-radius: 50%; background: var(--bad); display: inline-block; }
+  .dp-f button { color: var(--accent); font-weight: 600; padding: 0 10px; }
+
+  /* ---------- projekt pisma ---------- */
+  .letter-b { display: flex; gap: 20px; flex-wrap: wrap; padding: 16px 18px 18px; }
+  .letter-side { flex: 1 1 260px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+  .letter-side label { color: var(--muted); font-size: 13px; margin-bottom: -6px; }
+  .letter-side input, .letter-side select { height: 40px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 10px; font: inherit; background: var(--panel); color: var(--ink); }
+  .letter-side .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .letter-side .lbr { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .letter-side .lbr ol { margin: 6px 0 0; padding-left: 20px; }
+  .letter-paper { flex: 2 1 520px; min-width: 0; background: var(--viewer); border-radius: 8px; padding: 18px; }
+  .letter-paper textarea { display: block; width: 100%; box-sizing: border-box; min-height: 520px; resize: vertical; border: 0; border-radius: 3px; padding: 44px 52px; background: #fff; color: #1d1d1d; box-shadow: 0 2px 12px rgba(0, 0, 0, .3); font: 15px/1.65 Georgia, "Times New Roman", serif; }
+  .letter-paper textarea:focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+  @media (max-width: 640px) { .letter-paper { padding: 8px; } .letter-paper textarea { padding: 20px 18px; } }
   .checks small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; word-break: break-word; }
   .banner { display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; padding: 9px 14px; font-weight: 600; font-size: 14px; border: 1px solid; }
   .banner.bad { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
@@ -301,7 +345,7 @@ const fmtDate = (iso) => { const m = String(iso || "").match(/^(\d{4})-(\d{2})-(
 const S = {
   status: null, classes: null, rules: null,
   items: [], view: "start", caseName: null, current: null,
-  checks: {}, checksRaw: {}, skip: {}, log: [], q: "",
+  checks: {}, checksRaw: {}, skip: {}, letters: {}, pisma: null, log: [], q: "",
   filter: "todo", tab: "dane", zoom: 100, info: {}, activePath: null, termDays: {},
   who: (() => { try { return localStorage.getItem("aktomat-who") || ""; } catch (e) { return ""; } })(),
 };
@@ -335,6 +379,7 @@ fetch("/api/status").then(r => r.json()).then(s => {
 }).catch(() => { $("#chips").innerHTML = `<span class="chip"><span class="dot off"></span>brak połączenia z serwerem</span>`; });
 fetch("/api/klasy").then(r => r.json()).then(c => { S.classes = c; render(); });
 fetch("/api/kontrola/reguly").then(r => r.json()).then(r => { S.rules = r; });
+fetch("/api/pisma").then(r => r.json()).then(r => { S.pisma = r; }).catch(() => { S.pisma = { pisma: [] }; });
 
 /* ---------- stan dokumentów ---------- */
 const stateOf = (it) => it.pending ? "pending" : it.blad ? "err" : it.klasa ? "ok" : "rej";
@@ -783,6 +828,7 @@ function bindField(it, el) {
   const pola = it.slad?.pola || {};
   {
     const pth = el.dataset.path, inp = $("input", el);
+    if (specFor(it, pth)?.typ === "date") attachDate(inp, "iso");
     el.addEventListener("click", (e) => { if (e.target.closest("input,button:not([data-loc])")) return; activate(el, pth); locate(pola[pth]); });
     inp.addEventListener("focus", () => { activate(el, pth); locate(pola[pth]); });
     inp.addEventListener("change", () => applyEdit(it, pth, inp.value));
@@ -874,6 +920,193 @@ function scrollToTarget(page, hls) {
   if (dy || dx) box.scrollBy({ top: dy, left: dx, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 }
 
+
+/* ---------- kalendarz (po polsku, święta z config/kontrola.yaml) ---------- */
+const MIES = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
+const MIES_D = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
+const DNI_K = ["pn", "wt", "śr", "cz", "pt", "so", "nd"];
+const CAL_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg>';
+function parseAnyDate(v) {
+  const t = String(v || "").trim(); let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/), d = null;
+  if (m) d = new Date(+m[1], +m[2] - 1, +m[3]);
+  else if ((m = t.match(/^(\d{1,2})[.\-/ ](\d{1,2})[.\-/ ](\d{4})$/))) d = new Date(+m[3], +m[2] - 1, +m[1]);
+  return d && !isNaN(d) ? d : null;
+}
+const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const plOf = (d) => fmtDate(isoOf(d));
+const sameDay = (a, b) => a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const _hol = {};
+function holidays(y) {
+  if (_hol[y]) return _hol[y];
+  const sw = S.rules?.swieta || {}, out = new Set();
+  (sw.stale || []).forEach(md => out.add(`${y}-${md}`));
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mon = Math.floor((h + l - 7 * m + 114) / 31), day = (h + l - 7 * m + 114) % 31 + 1, easter = new Date(y, mon - 1, day);
+  const off = { wielkanoc: 0, poniedzialek_wielkanocny: 1, zeslanie_ducha: 49, boze_cialo: 60 };
+  (sw.ruchome || []).forEach(n => { if (n in off) { const x = new Date(easter); x.setDate(x.getDate() + off[n]); out.add(isoOf(x).slice(0, 10)); } });
+  if (S.rules) _hol[y] = out;
+  return out;
+}
+function normDateInput(inp) { const d = parseAnyDate(inp.value); if (d) inp.value = inp.dataset.fmt === "pl" ? plOf(d) : isoOf(d); }
+function attachDate(inp, fmt = "iso") {
+  if (inp.dataset.dp) return; inp.dataset.dp = "1"; inp.dataset.fmt = fmt;
+  if (!inp.placeholder || fmt === "pl") inp.placeholder = fmt === "pl" ? "dd.mm.rrrr" : "rrrr-mm-dd";
+  inp.setAttribute("inputmode", "numeric");
+  const wrap = document.createElement("span"); wrap.className = "dp-wrap"; inp.replaceWith(wrap); wrap.appendChild(inp);
+  const btn = document.createElement("button"); btn.type = "button"; btn.className = "dp-btn"; btn.innerHTML = CAL_ICO;
+  btn.setAttribute("aria-label", "Otwórz kalendarz"); btn.setAttribute("aria-haspopup", "dialog"); wrap.appendChild(btn);
+  btn.addEventListener("click", (e) => { e.stopPropagation(); dpEl && dpEl._inp === inp ? closeCal() : openCal(inp); });
+  inp.addEventListener("change", () => normDateInput(inp), { capture: true });
+  inp.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") normDateInput(inp);
+    if ((e.altKey && e.key === "ArrowDown") || e.key === "F4") { e.preventDefault(); openCal(inp); }
+  }, { capture: true });
+}
+let dpEl = null;
+function closeCal(refocus) {
+  if (!dpEl) return; const inp = dpEl._inp; dpEl.remove(); dpEl = null;
+  document.removeEventListener("mousedown", calOutside, true); window.removeEventListener("resize", closeCal);
+  if (refocus) inp.focus();
+}
+function calOutside(e) { if (dpEl && !dpEl.contains(e.target) && !e.target.closest(".dp-btn")) closeCal(); }
+function openCal(inp) {
+  closeCal();
+  const sel = parseAnyDate(inp.value), today = new Date();
+  let focus = sel || today, view = new Date(focus.getFullYear(), focus.getMonth(), 1);
+  const el = document.createElement("div"); el.className = "dp"; el._inp = inp;
+  el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Wybierz datę");
+  const pick = (d) => {
+    inp.value = d ? (inp.dataset.fmt === "pl" ? plOf(d) : isoOf(d)) : "";
+    inp.dispatchEvent(new Event("change", { bubbles: true })); closeCal(true);
+  };
+  const draw = (moveFocus) => {
+    const y = view.getFullYear(), mo = view.getMonth(), hol = holidays(y);
+    const start = new Date(y, mo, 1 - ((new Date(y, mo, 1).getDay() + 6) % 7));
+    let g = DNI_K.map((d, i) => `<span class="wd ${i > 4 ? "we" : ""}" aria-hidden="true">${d}</span>`).join("");
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const iso = isoOf(d), isHol = holidays(d.getFullYear()).has(iso), we = (d.getDay() + 6) % 7 > 4;
+      const cls = ["dp-d", d.getMonth() !== mo && "out", we && "we", isHol && "hol", sameDay(d, today) && "today", sameDay(d, sel) && "sel"].filter(Boolean).join(" ");
+      const label = `${d.getDate()} ${MIES_D[d.getMonth()]} ${d.getFullYear()}${isHol ? ", święto" : we ? ", dzień wolny" : ""}`;
+      g += `<button type="button" class="${cls}" data-iso="${iso}" tabindex="${sameDay(d, focus) ? 0 : -1}" aria-label="${label}" ${sameDay(d, sel) ? 'aria-pressed="true"' : ""}>${d.getDate()}</button>`;
+    }
+    el.innerHTML = `<div class="dp-h">
+        <button type="button" data-nav="-12" aria-label="Poprzedni rok">«</button><button type="button" data-nav="-1" aria-label="Poprzedni miesiąc">‹</button>
+        <span class="t" aria-live="polite">${MIES[mo]} ${y}</span>
+        <button type="button" data-nav="1" aria-label="Następny miesiąc">›</button><button type="button" data-nav="12" aria-label="Następny rok">»</button></div>
+      <div class="dp-g" role="grid">${g}</div>
+      <div class="dp-f"><span class="lg"><i></i>święto</span><button type="button" data-today="1">Dziś</button><button type="button" data-clear="1">Wyczyść</button></div>`;
+    $$("[data-nav]", el).forEach(b => b.onclick = () => { view = new Date(y, mo + +b.dataset.nav, 1); focus = new Date(view.getFullYear(), view.getMonth(), Math.min(focus.getDate(), 28)); draw(); });
+    $$(".dp-d", el).forEach(b => b.onclick = () => pick(parseAnyDate(b.dataset.iso)));
+    $("[data-today]", el).onclick = () => pick(new Date());
+    $("[data-clear]", el).onclick = () => pick(null);
+    if (moveFocus !== false) $(".dp-d[tabindex='0']", el)?.focus({ preventScroll: true });
+  };
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeCal(true); return; }
+    if (!e.target.classList.contains("dp-d")) return;
+    const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key];
+    let d = parseAnyDate(e.target.dataset.iso);
+    if (step) d.setDate(d.getDate() + step);
+    else if (e.key === "PageUp" || e.key === "PageDown") d.setMonth(d.getMonth() + (e.key === "PageUp" ? -1 : 1) * (e.shiftKey ? 12 : 1));
+    else if (e.key === "Home") d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    else if (e.key === "End") d.setDate(d.getDate() + 6 - (d.getDay() + 6) % 7);
+    else return;
+    e.preventDefault(); focus = d; view = new Date(d.getFullYear(), d.getMonth(), 1); draw();
+  });
+  document.body.appendChild(el); dpEl = el; draw(false);
+  el._place = () => {
+    const r = inp.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+    if (r.bottom < 0 || r.top > innerHeight) return closeCal();
+    const top = r.bottom + 6 + h > innerHeight && r.top - 6 - h > 0 ? r.top - 6 - h : Math.min(r.bottom + 6, innerHeight - h - 8);
+    el.style.top = Math.max(8, top) + "px"; el.style.left = Math.max(8, Math.min(r.right - w, innerWidth - w - 8)) + "px";
+  };
+  el._place();
+  $(".dp-d[tabindex='0']", el)?.focus({ preventScroll: true });
+  setTimeout(() => { document.addEventListener("mousedown", calOutside, true); window.addEventListener("resize", closeCal); });
+}
+document.addEventListener("scroll", (e) => { if (dpEl && !dpEl.contains(e.target)) dpEl._place?.(); }, true);
+
+/* ---------- projekt pisma o uzupełnienie braków (szablon: config/pisma.yaml) ---------- */
+function letterVars(name, st) {
+  const ch = S.checks[name], odw = caseItems(name).find(i => i.klasa === "odwolanie")?.json || {};
+  const o = odw.Odwolujacy?.[0] || {}, z = odw.Zamawiajacy?.[0] || {}, zp = odw.ZamowieniePubliczne || {}, ok = odw.OdwolanieKIO || {}, pel = o.pelnomocnik || {};
+  const tpl = st.tpl || {};
+  const items = ch ? [...ch.wymagane, ...ch.pola, ...ch.zgodnosc].filter(x => ["brak", "niezgodne"].includes(x.wynik)) : [];
+  const lines = items.map((x, i) => `${i + 1}) ${x.wezwanie || "uzupełnienia: " + x.opis.toLowerCase()}${i === items.length - 1 ? "." : ";"}`);
+  return {
+    vars: {
+      data: st.data, miejscowosc: S.pisma?.miejscowosc, sygnatura: st.syg,
+      odwolujacy: o.nazwa, pelnomocnik: pel.imie_nazwisko, pelnomocnik_kancelaria: pel.nazwa, pelnomocnik_mail: pel.mail,
+      pelnomocnik_linia: pel.imie_nazwisko ? `za pośrednictwem pełnomocnika: ${pel.imie_nazwisko}${pel.nazwa ? ", " + pel.nazwa : ""}` : "",
+      zamawiajacy: z.nazwa, numer_postepowania: zp.numer_postepowania, numer_bzp: zp.numer_bzp, numer_ted: zp.numer_ted, tytul_postepowania: zp.tytul,
+      czynnosc_dzien: ok.czynnosc_dzien ? fmtDate(ok.czynnosc_dzien) : null,
+      braki: lines.length ? lines.join("\n") : "[kontrola nie wykazała braków do uzupełnienia]",
+      termin_uzupelnienia: tpl.termin_uzupelnienia, podstawa: tpl.podstawa,
+    }, items,
+  };
+}
+function fillLetter(name, st) {
+  const { vars, items } = letterVars(name, st);
+  const txt = String(st.tpl?.tekst || "").replace(/\{(\w+)\}/g, (_, k) => { const v = vars[k]; return v === "" ? "" : v == null ? `[${k.replace(/_/g, " ")}]` : String(v); });
+  return { txt: txt.replace(/(?<!\.)\.\.(?!\.)/g, ".").replace(/\n{3,}/g, "\n\n").trim() + "\n", items };   // "S.A.." -> "S.A."
+}
+function letterState(name) {
+  const tpls = S.pisma?.pisma || [];
+  const st = S.letters[name] ||= { id: tpls[0]?.id, syg: "", data: plOf(new Date()), edited: false, tekst: "" };
+  st.tpl = tpls.find(t => t.id === st.id) || tpls[0];
+  if (!st.edited) st.tekst = st.tpl ? fillLetter(name, st).txt : "";
+  return st;
+}
+function letterHtml(name) {
+  if (!S.pisma) return "";
+  const st = letterState(name), tpls = S.pisma.pisma || [];
+  if (!st.tpl) return "";
+  const { items } = fillLetter(name, st);
+  return `<section class="card" aria-labelledby="h-pismo" style="margin-top:16px">
+    <div class="card-h"><h2 id="h-pismo">Projekt pisma o uzupełnienie braków</h2><span class="st-muted" style="font-size:13px">szablon: <code>config/pisma.yaml</code></span></div>
+    <div class="letter-b">
+      <div class="letter-side">
+        <p style="margin:0;color:var(--muted)">Szablon wypełniony danymi sprawy i brakami z kontroli, bez pozycji pominiętych. Referent poprawia tekst i podpisuje pismo we własnym systemie.</p>
+        ${tpls.length > 1 ? `<label for="lType">Rodzaj pisma</label><select id="lType">${tpls.map(t => `<option value="${esc(t.id)}" ${t.id === st.tpl.id ? "selected" : ""}>${esc(t.nazwa || t.id)}</option>`).join("")}</select>` : ""}
+        <label for="lSyg">Sygnatura</label><input id="lSyg" value="${esc(st.syg)}" placeholder="np. KIO 1234/26" autocomplete="off">
+        <label for="lDate">Data pisma</label><input id="lDate" value="${esc(st.data)}">
+        <div class="lbr"><b>${items.length ? `${items.length} ${plural(items.length, "brak", "braki", "braków")} w wezwaniu` : "Brak pozycji do wezwania"}</b>${items.length ? `<ol>${items.map(x => `<li>${esc(x.opis)}</li>`).join("")}</ol>` : `<div class="st-muted" style="font-size:13px;margin-top:4px">Kontrola nie wykazała braków albo wszystkie zostały pominięte.</div>`}</div>
+        <div class="st-muted" style="font-size:12.5px">W pliku .docx: <code>#</code> tytuł, <code>&gt;</code> do prawej, <code>**tekst**</code> pogrubienie.</div>
+        <div class="st-warn" id="lEdited" style="font-size:13px" ${st.edited ? "" : "hidden"}>Tekst edytowany ręcznie: zmiany w sprawie go nie nadpisują.</div>
+        <div class="acts"><button class="btn primary" type="button" id="lDocx">Pobierz .docx</button><button class="btn" type="button" id="lCopy">Kopiuj tekst</button><button class="btn" type="button" id="lReset" ${st.edited ? "" : "hidden"}>Wygeneruj ponownie</button></div>
+      </div>
+      <div class="letter-paper"><textarea id="lText" aria-label="Treść pisma" spellcheck="true">${esc(st.tekst)}</textarea></div>
+    </div>
+  </section>`;
+}
+function bindLetter(name) {
+  const st = S.letters[name]; if (!st || !$("#lText")) return;
+  const ta = $("#lText"), grow = () => { ta.style.height = "auto"; ta.style.height = Math.max(520, ta.scrollHeight + 4) + "px"; };
+  grow();
+  const regen = () => { if (!st.edited) { st.tekst = fillLetter(name, st).txt; ta.value = st.tekst; grow(); } };
+  ta.oninput = () => { st.tekst = ta.value; if (!st.edited) { st.edited = true; $("#lEdited").hidden = false; $("#lReset").hidden = false; } grow(); };
+  $("#lSyg").oninput = (e) => { st.syg = e.target.value; regen(); };
+  attachDate($("#lDate"), "pl");
+  $("#lDate").onchange = (e) => { st.data = e.target.value; regen(); };
+  $("#lType") && ($("#lType").onchange = (e) => { st.id = e.target.value; st.edited = false; render(); });
+  $("#lReset").onclick = () => { st.edited = false; render(); };
+  const plain = () => st.tekst.replace(/^(# |> )/gm, "").replace(/\*\*/g, "");
+  $("#lCopy").onclick = async () => {
+    try { await navigator.clipboard.writeText(plain()); } catch (e) { ta.select(); document.execCommand("copy"); }
+    say("Skopiowano treść pisma do schowka.");
+  };
+  $("#lDocx").onclick = async () => {
+    const nazwa = `${st.tpl.id}_${name}`;
+    const r = await fetch("/api/docx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tekst: st.tekst, nazwa }) });
+    if (!r.ok) return say("Nie udało się utworzyć pliku .docx.");
+    save(await r.blob(), nazwa + ".docx");
+    S.log.push({ czas: new Date().toISOString(), kto: S.who || "", sprawa: name, plik: "(pismo)", pole: st.tpl.nazwa || st.tpl.id, akcja: "wygenerowano pismo .docx", z: null, na: st.syg || null });
+    drawNav();
+  };
+}
+
 /* ---------- kontrola formalna ---------- */
 function renderControl() {
   const name = S.caseName, ch = S.checks[name], its = caseItems(name);
@@ -902,7 +1135,7 @@ function renderControl() {
       </div>
       <div class="narrow">
         <section class="card card-b" aria-labelledby="h-term"><h2 id="h-term" style="margin-bottom:12px">Kalkulator terminów</h2>
-          ${term ? `<div class="grid2"><label for="tStart" style="color:var(--muted)">Data czynności</label><input id="tStart" type="date" value="${esc(term.od || "")}">
+          ${term ? `<div class="grid2"><label for="tStart" style="color:var(--muted)">Data czynności</label><input id="tStart" value="${esc(fmtDate(term.od || ""))}">
             <label for="tDays" style="color:var(--muted)">Liczba dni</label><select id="tDays">${(term.warianty || [term.dni]).map(d => `<option value="${d}" ${+d === +term.dni ? "selected" : ""}>${d} dni</option>`).join("")}</select></div>
             <div class="result" id="tRes">${term.do ? `${esc(term.opis)}: <b>${fmtDate(term.do)}</b> (${esc(term.dzien_tygodnia)})${term.przesuniety ? "<br><small>Przesunięty z dnia wolnego na najbliższy dzień roboczy.</small>" : ""}` : "Brak daty czynności w odwołaniu."}</div>` : '<p class="st-muted">Brak skonfigurowanych terminów.</p>'}
         </section>
@@ -919,12 +1152,14 @@ function renderControl() {
         </section>
       </div>
     </div>
+    ${letterHtml(name)}
   </div>`;
   $$("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   bindSkips(name);
+  bindLetter(name);
   if (term) {
     const upd = async () => {
-      const od = $("#tStart").value, dni = +$("#tDays").value;
+      const dd = parseAnyDate($("#tStart").value), od = dd ? isoOf(dd) : "", dni = +$("#tDays").value;
       S.termDays[term.id] = dni;
       if (!od) return;
       const docs = [{ plik: "_", klasa: "odwolanie", json: { OdwolanieKIO: { czynnosc_dzien: od } } }];
@@ -932,6 +1167,7 @@ function renderControl() {
       const t2 = r.terminy.find(x => x.id === term.id);
       $("#tRes").innerHTML = t2?.do ? `${esc(t2.opis)}: <b>${fmtDate(t2.do)}</b> (${esc(t2.dzien_tygodnia)})${t2.przesuniety ? "<br><small>Przesunięty z dnia wolnego na najbliższy dzień roboczy.</small>" : ""}` : "Nie można policzyć terminu.";
     };
+    attachDate($("#tStart"), "pl");
     $("#tStart").onchange = upd; $("#tDays").onchange = () => { upd(); recheck(name); };
   }
   $("#xGo").onclick = () => {

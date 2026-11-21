@@ -99,3 +99,17 @@ def test_api_kontrola_i_zip_z_dziennikiem(client):
                                                {"sciezka": "../x.exe", "tekst": "no"}]})
     names = zipfile.ZipFile(io.BytesIO(z.content)).namelist()
     assert names == ["output/s1/a.json", "dziennik_zmian.csv"]
+
+
+def test_pisma_i_docx(client):
+    pydocx = pytest.importorskip("docx")  # python-docx (opcjonalnie) tylko do odczytu w teście
+
+    pisma = client.get("/api/pisma").json()
+    tpl = pisma["pisma"][0]
+    assert tpl["id"] == "wezwanie_braki" and "{braki}" in tpl["tekst"]
+    r = client.post("/api/docx", json={"tekst": "> Warszawa, dnia 1.01.2026\n\n# WEZWANIE\n\n**Firma** & Syn\n1) wpisu.",
+                                       "nazwa": "wezwanie/../x"})
+    assert r.status_code == 200 and 'filename="wezwaniex.docx"' in r.headers["content-disposition"]
+    d = pydocx.Document(io.BytesIO(r.content))
+    assert [p.text for p in d.paragraphs] == ["Warszawa, dnia 1.01.2026", "WEZWANIE", "Firma & Syn\n1) wpisu."]
+    assert d.paragraphs[2].runs[0].bold and not d.paragraphs[2].runs[1].bold

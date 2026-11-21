@@ -16,11 +16,13 @@ import uuid
 import zipfile
 from pathlib import Path, PurePosixPath
 
+import yaml
 from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 
-from .config import ROOT
+from .config import CONFIG_DIR, ROOT
+from .wordfile import DOCX_MIME, build_docx
 from .checks import load_rules, run_checks
 from .locate import locate, page_words
 from .pipeline import Engine
@@ -259,3 +261,18 @@ def eksport_zip(pliki: list[dict] = Body(..., embed=True), inne: list[dict] | No
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/zip",
                              headers={"Content-Disposition": 'attachment; filename="wyniki_aktomat.zip"'})
+
+
+@app.get("/api/pisma")
+def pisma():
+    """Szablony pism z config/pisma.yaml (projekt wezwania do uzupełnienia braków)."""
+    p = CONFIG_DIR / "pisma.yaml"
+    return yaml.safe_load(p.read_text(encoding="utf-8")) if p.exists() else {"pisma": []}
+
+
+@app.post("/api/docx")
+def docx(tekst: str = Body(..., embed=True), nazwa: str = Body("pismo", embed=True)):
+    """Tekst pisma -> .docx. "# " tytuł, "> " do prawej, **pogrubienie**, pusta linia = nowy akapit."""
+    name = re.sub(r"[^\w\- ]+", "", nazwa).strip() or "pismo"
+    return Response(build_docx(tekst), media_type=DOCX_MIME,
+                    headers={"Content-Disposition": f'attachment; filename="{name}.docx"'})

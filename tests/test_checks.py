@@ -75,3 +75,8 @@ def test_walidacja_w_wyniku(rules):
     v = run_checks([ODW, PEL], rules)["walidacja"]
     assert v["odwolanie.pdf"]["Odwolujacy[0].nip"] == {"typ": "nip", "ok": True}
     assert v["pelnomocnictwo.pdf"]["mocodawca[0].data.nip"]["ok"] is True
+
+
+def test_wezwanie_w_wyniku(rules):
+    req = _by_id(run_checks([ODW, PEL, PRZ], rules)["wymagane"])
+    assert req["wpis"]["wezwanie"] == "przedstawienia dowodu uiszczenia wpisu od odwołania"

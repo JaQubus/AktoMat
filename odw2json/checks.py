@@ -76,7 +76,7 @@ def _condition(docs, gdy) -> bool:
 
 
 def _required(docs, rule) -> dict:
-    out = {"id": rule.get("id"), "opis": rule.get("opis"), "dokumenty": []}
+    out = {"id": rule.get("id"), "opis": rule.get("opis"), "wezwanie": rule.get("wezwanie"), "dokumenty": []}
     if not _condition(docs, rule.get("gdy")):
         return {**out, "wynik": "nie_dotyczy", "szczegoly": "Wymóg nie dotyczy tej sprawy."}
     cands = _docs(docs, rule["klasa"])
@@ -118,7 +118,8 @@ def _side(docs, spec):
 def _cross(docs, rule) -> dict:
     a, fa = _side(docs, rule["a"])
     b, fb = _side(docs, rule["b"])
-    out = {"id": rule.get("id"), "opis": rule.get("opis"), "a": a, "b": b, "dokumenty": fa + fb}
+    out = {"id": rule.get("id"), "opis": rule.get("opis"), "wezwanie": rule.get("wezwanie"),
+           "a": a, "b": b, "dokumenty": fa + fb}
     if not a or not b:
         missing = rule["a"]["klasa"] if not a else rule["b"]["klasa"]
         return {**out, "wynik": "brak_danych", "szczegoly": f"Brak wartości do porównania ({missing})."}
@@ -265,7 +266,7 @@ def run_checks(docs: list[dict], rules: dict | None = None, term_days: dict | No
         if not ds:
             continue
         ok = any(values(d["json"], r["pole"]) for d in ds)
-        fields.append({"id": r["pole"], "opis": r.get("opis"), "wynik": "ok" if ok else r.get("poziom", "ostrzezenie"),
+        fields.append({"id": r["pole"], "opis": r.get("opis"), "wezwanie": r.get("wezwanie"), "wynik": "ok" if ok else r.get("poziom", "ostrzezenie"),
                        "dokumenty": [d.get("plik") for d in ds], "szczegoly": None if ok else "Brak w dokumencie."})
     cross = [_cross(docs, r) for r in rules.get("zgodnosc", [])]
     terms = [_terms(docs, r, rules, (term_days or {}).get(r.get("id"))) for r in rules.get("terminy", [])]
