@@ -75,7 +75,9 @@
   .nav.sub { padding-left: 26px; font-size: 13.5px; }
   .nav.sub .cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .navsep { height: 1px; background: var(--line); margin: 8px 4px; }
-  .navlabel { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 10px 12px 4px; font-weight: 600; }
+  .navlabel { font-size: 13px; color: var(--muted); padding: 12px 12px 4px; font-weight: 600; }
+  .nav.cfg { font-size: 13.5px; color: var(--muted); padding-top: 7px; padding-bottom: 7px; }
+  .nav.cfg[aria-current="page"] { color: var(--accent); }
   .navfoot { padding: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
   .progress { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
   .progress i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
@@ -88,6 +90,19 @@
   .btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
   .btn.sm { min-height: 32px; padding: 0 10px; font-size: 13px; }
   .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .btn.quiet { border-color: transparent; background: transparent; color: var(--bad); font-weight: 600; }
+  .btn.quiet:hover:not(:disabled) { background: var(--bad-soft); }
+  .src-note { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+  .src-note code { font-family: var(--mono); font-size: 12px; }
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; counter-reset: st; }
+  .steps li { counter-increment: st; position: relative; padding: 0 24px 0 46px; }
+  .steps li + li { border-left: 1px solid var(--line); padding-left: 70px; }
+  .steps li::before { content: counter(st); position: absolute; left: 0; top: 0; width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 700; display: grid; place-items: center; }
+  .steps li + li::before { left: 24px; }
+  .steps b { display: block; font-size: 15px; margin-bottom: 2px; }
+  .steps span { color: var(--muted); font-size: 14px; }
+  @media (max-width: 900px) { .steps { grid-template-columns: 1fr; gap: 16px; } .steps li + li { border-left: 0; padding-left: 46px; } .steps li + li::before { left: 0; } }
+  .cmp small { display: block; color: var(--muted); font-size: 12.5px; }
   .crumb { font-size: 13px; color: var(--muted); }
   .crumb button { background: none; border: 0; padding: 0; color: var(--accent); cursor: pointer; font-size: 13px; }
   h1 { margin: 2px 0 6px; font-size: 25px; line-height: 1.25; }
@@ -98,7 +113,7 @@
   .headrow > div:first-child { flex: 1 1 420px; min-width: 0; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-  .card-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .card-h { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
   .card-h h2 { flex: 1; }
   .card-b { padding: 16px; }
   .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -110,9 +125,10 @@
   .cols { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
   .cols > .wide { flex: 3 1 520px; min-width: 0; }
   .cols > .narrow { flex: 2 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-  .tw { overflow-x: auto; }
+  .tw { overflow-x: auto; position: relative; }
+  td.nw { white-space: nowrap; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; padding: 10px 12px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 13px; padding: 10px 12px; background: var(--panel-2); }
   td { padding: 11px 12px; border-top: 1px solid var(--line); vertical-align: top; }
   th:first-child, td:first-child { padding-left: 16px; } th:last-child, td:last-child { padding-right: 16px; }
   td.mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
@@ -157,7 +173,7 @@
   table.reg td small { display: block; color: var(--muted); font-size: 12.5px; }
   table.reg tr.click:hover td { background: var(--panel-2); }
   .rel { display: inline-flex; align-items: center; gap: 4px; background: var(--llm-soft); color: var(--llm); border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin: 2px 4px 2px 0; white-space: nowrap; }
-  .due { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 3px; }
+  .due { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 3px; white-space: nowrap; }
   .due.past { background: var(--bad-soft); color: var(--bad); } .due.soon { background: var(--warn-soft); color: var(--warn); } .due.ok { background: var(--ok-soft); color: var(--ok); }
   mark.hit { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
   .tc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
@@ -287,12 +303,12 @@
   .facts b { color: var(--ink); font-weight: 600; }
   .toolbar { display: flex; gap: 6px; padding: 10px 18px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--line); }
   .seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
-  .seg button { border: 0; background: var(--panel); padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  .seg button { border: 0; background: var(--panel); padding: 6px 10px; cursor: pointer; font-size: 13px; }
   .seg button + button { border-left: 1px solid var(--line-strong); }
   .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
   .toolbar .grow { flex: 1; }
   .fields { flex: 1; overflow: auto; padding: 4px 18px 18px; }
-  .group h3 { margin: 14px 0 6px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); }
+  .group h3 { margin: 16px 0 6px; font-size: 14px; color: var(--muted); }
   .field { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; background: var(--panel); }
   .field.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .field.done { background: var(--panel-2); }
@@ -347,7 +363,8 @@
 
   @media (max-width: 1100px) { .docview { grid-template-columns: 1fr; } .viewer { min-height: 70vh; } .panel { border-left: 0; border-top: 1px solid var(--line); } .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 800px) {
-    .shell { flex-direction: column; overflow: auto; }
+    html, body { height: auto; min-height: 100%; }
+    .shell { flex-direction: column; }
     nav.side { width: 100%; border-right: 0; border-bottom: 1px solid var(--line); }
     .navlist { max-height: 40vh; }
     main#main { overflow: visible; }
@@ -382,7 +399,7 @@
     <div class="navlist" id="navlist"></div>
     <div class="navfoot">
       <div class="progress" id="progress" hidden role="progressbar" aria-label="Postęp analizy" aria-valuemin="0" aria-valuemax="100"><i></i></div>
-      <button class="btn primary" type="button" id="zipAll" disabled>Pobierz wszystko (ZIP)</button>
+      <button class="btn" type="button" id="zipAll" disabled title="Dane wszystkich wczytanych dokumentów, rejestr spraw i dziennik zmian w jednym archiwum ZIP">Pobierz wszystkie wyniki</button>
     </div>
   </nav>
   <main id="main" tabindex="-1"></main>
@@ -467,7 +484,8 @@ const S = {
 const KIND = { odwolanie: ["ODW", "Odwołanie"], pelnomocnictwo: ["PEŁ", "Pełnomocnictwo"], przelew: ["PRZ", "Potwierdzenie przelewu"] };
 const kindLabel = (k) => KIND[k]?.[1] || humanize(k || "");
 const tag = (k) => k ? `<span class="tag ${KIND[k] ? "t-" + esc(k) : "t-other"}">${esc(kindLabel(k))}</span>` : `<span class="tag t-rej">Nierozpoznany</span>`;
-const SRC = { "reguły": "reguła", "LLM": "model językowy", "wyliczone": "wyliczone", "brak": "nie znaleziono", "ręcznie": "poprawione ręcznie" };
+const SRC = { "reguły": "odczytana regułą z tekstu dokumentu", "LLM": "podana przez model AI, do sprawdzenia", "wyliczone": "wyliczona z innych pól", "brak": "nie znaleziono w dokumencie", "ręcznie": "poprawiona ręcznie przez referenta" };
+const BADGE = { "reguły": "z tekstu", "LLM": "AI", "wyliczone": "wyliczone", "brak": "brak", "ręcznie": "poprawione" };
 const VNAME = { nip: "NIP", regon: "REGON", krs: "KRS", pesel: "PESEL", nrb: "numeru rachunku" };
 
 /* ---------- motyw, referent ---------- */
@@ -511,7 +529,8 @@ $("#q").addEventListener("input", (e) => { S.q = e.target.value; drawNav(); if (
 /* ---------- dane startowe ---------- */
 fetch("/api/status").then(r => r.json()).then(s => {
   S.status = s;
-  $("#chips").innerHTML = `<span class="chip" title="${s.llm ? "Model językowy uzupełnia pola, których nie wyznaczyły reguły" : "Ekstrakcja wyłącznie regułami"}"><span class="dot ${s.llm ? "on" : "off"}"></span>${s.llm ? "LLM: " + esc(s.model) : "Same reguły"} · OCR: ${s.ocr ? esc(s.ocr_silnik) : "wył."}</span>`;
+  const tip = `${s.llm ? `Dane odczytują reguły, a brakujące pola uzupełnia model AI (${s.model}, serwer w UE). Wartości od AI są oznaczone do sprawdzenia.` : "Dane odczytują wyłącznie reguły, bez modelu AI."} ${s.ocr ? "Skany są zamieniane na tekst (OCR)." : "Odczyt skanów (OCR) jest wyłączony: skany mogą zostać bez danych."}`;
+  $("#chips").innerHTML = `<span class="chip" title="${esc(tip)}"><span class="dot ${s.llm ? "on" : "off"}"></span>${s.llm ? "Asystent AI włączony" : "Bez asystenta AI"}${s.ocr ? "" : ", bez odczytu skanów"}</span>`;
 }).catch(() => { $("#chips").innerHTML = `<span class="chip"><span class="dot off"></span>brak połączenia z serwerem</span>`; });
 fetch("/api/klasy").then(r => r.json()).then(c => { S.classes = c; render(); });
 fetch("/api/kontrola/reguly").then(r => r.json()).then(r => { S.rules = r; });
@@ -556,18 +575,23 @@ function drawNav() {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>Wczytaj dokumenty${busy ? '<span class="n"><span class="spinner"></span></span>' : ""}</button>
     <button class="nav" type="button" data-go="kolejka" ${S.view === "kolejka" ? 'aria-current="page"' : ""}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1h11"/></svg>Kolejka weryfikacji${todoDocs ? `<span class="n hot">${todoDocs}</span>` : ""}</button>
-    <div class="navlabel">Sprawy</div>`;
+    <div class="navlabel">Sprawy w tej sesji</div>`;
   if (!names.length) h += `<div class="st-muted" style="font-size:13px;padding:4px 12px 8px">${S.items.length ? "Brak wyników wyszukiwania." : "Brak wczytanych spraw."}</div>`;
   names.forEach(n => {
     const ch = S.checks[n]?.podsumowanie, cur = (S.view === "sprawa" || S.view === "kontrola" || S.view === "dokument") && S.caseName === n;
     h += `<button class="nav sub" type="button" data-case="${esc(n)}" ${cur ? 'aria-current="page"' : ""} title="${esc(n)}"><span class="cn">${esc(n)}</span>${ch?.braki ? `<span class="n bad" title="braki formalne">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : `<span class="n st-muted">${caseItems(n).length}</span>`}</button>`;
   });
+  const cur = (v) => S.view === v ? 'aria-current="page"' : "";
   h += `<div class="navsep"></div>
-    <button class="nav" type="button" data-go="rejestr" ${S.view === "rejestr" ? 'aria-current="page"' : ""}>Rejestr spraw</button>
-    <button class="nav" type="button" data-go="terminy" ${S.view === "terminy" ? 'aria-current="page"' : ""}>Kalkulator terminów</button>
-    <button class="nav" type="button" data-go="klasy" ${S.view === "klasy" ? 'aria-current="page"' : ""}>Klasy i reguły (YAML)</button>
-    <button class="nav" type="button" data-go="raport" ${S.view === "raport" ? 'aria-current="page"' : ""}>Raport jakości</button>
-    <button class="nav" type="button" data-go="dziennik" ${S.view === "dziennik" ? 'aria-current="page"' : ""}>Dziennik zmian${S.log.length ? `<span class="n st-muted">${S.log.length}</span>` : ""}</button>`;
+    <button class="nav" type="button" data-go="rejestr" ${cur("rejestr")}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg>Rejestr spraw</button>
+    <button class="nav" type="button" data-go="terminy" ${cur("terminy")}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Kalkulator terminów</button>
+    <button class="nav" type="button" data-go="dziennik" ${cur("dziennik")}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Dziennik zmian${S.log.length ? `<span class="n st-muted">${S.log.length}</span>` : ""}</button>
+    <div class="navlabel">Konfiguracja</div>
+    <button class="nav cfg" type="button" data-go="klasy" ${cur("klasy")}>Typy dokumentów i reguły</button>
+    <button class="nav cfg" type="button" data-go="raport" ${cur("raport")}>Skuteczność odczytu</button>`;
   $("#navlist").innerHTML = h;
   $$("#navlist [data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   $$("#navlist [data-case]").forEach(b => b.onclick = () => go("sprawa", { caseName: b.dataset.case }));
@@ -643,10 +667,10 @@ $("#sess").onclick = async () => {
 function sessionsHtml() {
   const list = S.sessions.filter(x => x.dokumenty);
   if (!list.length) return "";
-  return `<section class="card"><div class="card-h"><h2>Zapisane sesje</h2><span class="st-muted" style="font-size:13px">Praca zapisuje się sama: poprawki, zatwierdzenia, pominięcia, pisma i dziennik.</span></div>
+  return `<section class="card"><div class="card-h"><h2>Zapisane sesje</h2><span class="st-muted" style="font-size:13px">Praca zapisuje się sama, można wrócić do niej później.</span></div>
     <div class="tw"><table class="sesslist"><thead><tr><th>Sesja</th><th>Sprawy</th><th>Dokumenty</th><th>Referent</th><th>Zmieniono</th><th></th></tr></thead><tbody>
     ${list.map(x => `<tr class="${x.id === S.sid ? "cur" : ""}"><td><b>${esc(x.nazwa)}</b></td><td>${esc(x.sprawy.slice(0, 4).join(", "))}${x.sprawy.length > 4 ? ` i ${x.sprawy.length - 4} więcej` : ""}</td><td>${x.dokumenty}</td><td>${esc(x.referent || "—")}</td><td>${x.zmieniono ? new Date(x.zmieniono).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</td>
-      <td><div class="acts">${x.id === S.sid ? "" : `<button class="btn sm primary" type="button" data-open="${esc(x.id)}">Otwórz</button>`}<button class="btn sm" type="button" data-del="${esc(x.id)}" aria-label="Usuń sesję ${esc(x.nazwa)}">Usuń</button></div></td></tr>`).join("")}
+      <td><div class="acts">${x.id === S.sid ? "" : `<button class="btn sm primary" type="button" data-open="${esc(x.id)}">Otwórz</button>`}<button class="btn sm quiet" type="button" data-del="${esc(x.id)}" aria-label="Usuń sesję ${esc(x.nazwa)}">Usuń</button></div></td></tr>`).join("")}
     </tbody></table></div></section>`;
 }
 function bindSessions() {
@@ -702,16 +726,21 @@ function registerCsv(names) { return csv([(S.eksport?.rejestr?.kolumny || []).ma
 function renderStart() {
   const names = caseNames();
   $("#main").innerHTML = `<div class="page">
-    <div><h1>Wczytaj dokumenty sprawy</h1><p class="lead">AktoMat rozpozna typ każdego dokumentu (odwołanie, pełnomocnictwo, potwierdzenie przelewu), wyciągnie dane do JSON i sprawdzi kompletność teczki. Pliki z jednego folderu albo archiwum trafiają do jednej sprawy.</p></div>
+    <div><h1>Wczytaj dokumenty sprawy</h1><p class="lead">AktoMat rozpozna odwołanie, pełnomocnictwo i potwierdzenie przelewu, odczyta z nich dane i sprawdzi, czy teczka jest kompletna. Pliki z jednego folderu albo jednego archiwum ZIP tworzą jedną sprawę.</p></div>
     <div id="drop">
       <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--accent)"><path d="M12 16V4m0 0l-4 4m4-4l4 4"/><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
       <h2>Przeciągnij tutaj pliki PDF, folder sprawy albo archiwum ZIP</h2>
-      <p>Skany są odczytywane przez OCR. Dokumenty spoza skonfigurowanych klas dostają pusty JSON <code>{}</code>.</p>
-      <div class="pickers"><button class="btn primary" type="button" data-pick="pickFiles">Wybierz pliki PDF</button><button class="btn" type="button" data-pick="pickFolder">Wybierz folder</button><button class="btn" type="button" data-pick="pickZip">Wybierz ZIP</button></div>
+      <p>Działa także ze skanami. Plik, który nie jest żadnym z trzech dokumentów, zostanie oznaczony jako nierozpoznany.</p>
+      <div class="pickers"><button class="btn primary" type="button" data-pick="pickFiles">Wybierz pliki PDF</button><button class="btn" type="button" data-pick="pickFolder">Wybierz folder sprawy</button><button class="btn" type="button" data-pick="pickZip">Wybierz archiwum ZIP</button></div>
     </div>
-    ${names.length ? `<section class="card"><div class="card-h"><h2>Wczytane sprawy</h2><span style="flex:1"></span><button class="btn sm" type="button" id="regCsv">Rejestr spraw (CSV)</button><button class="btn sm" type="button" id="newSess">Nowa sesja</button></div><div class="tw"><table><thead><tr><th>Sprawa</th><th>Dokumenty</th><th>Pola do sprawdzenia</th><th>Kontrola formalna</th><th><span class="sr-only">Akcje</span></th></tr></thead><tbody>
+    ${names.length ? "" : `<section class="card card-b" aria-label="Jak pracować z AktoMatem"><ol class="steps">
+      <li><b>Wczytaj dokumenty</b><span>AktoMat rozpozna typ każdego pliku i odczyta dane: strony, numery postępowania, NIP, kwoty, daty.</span></li>
+      <li><b>Sprawdź odczytane dane</b><span>Obok podglądu dokumentu widać każde pole i miejsce, z którego pochodzi. Popraw albo zatwierdź klawiszem Enter.</span></li>
+      <li><b>Zrób kontrolę formalną</b><span>Braki, zgodność pełnomocnictwa i termin na wniesienie odwołania. Z braków powstaje projekt wezwania (.docx).</span></li>
+    </ol></section>`}
+    ${names.length ? `<section class="card"><div class="card-h"><h2>Sprawy w tej sesji</h2><button class="btn sm" type="button" id="regCsv">Pobierz rejestr (CSV)</button><button class="btn sm" type="button" id="newSess" title="Zapisuje bieżącą pracę i zaczyna od pustej listy spraw">Nowa sesja</button></div><div class="tw"><table><thead><tr><th>Sprawa</th><th>Dokumenty</th><th>Pola do sprawdzenia</th><th>Kontrola formalna</th><th><span class="sr-only">Akcje</span></th></tr></thead><tbody>
       ${names.filter(n => caseItems(n).some(matches)).map(n => { const its = caseItems(n), todo = its.reduce((a, i) => a + counts(i).todo, 0), ch = S.checks[n]?.podsumowanie;
-        return `<tr class="click" data-case="${esc(n)}"><td><b>${esc(n)}</b></td><td>${its.length}</td><td>${todo ? `<span class="st-warn">${todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${!ch ? '<span class="st-muted">…</span>' : ch.braki ? `<span class="st-bad">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : '<span class="st-ok">bez braków</span>'}</td><td style="text-align:right"><button class="btn sm" type="button" data-delcase="${esc(n)}" aria-label="Usuń sprawę ${esc(n)}">Usuń</button></td></tr>`; }).join("")}
+        return `<tr class="click" data-case="${esc(n)}"><td><b>${esc(n)}</b></td><td>${its.length}</td><td>${todo ? `<span class="st-warn">${todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${!ch ? '<span class="st-muted">…</span>' : ch.braki ? `<span class="st-bad">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : '<span class="st-ok">bez braków</span>'}</td><td style="text-align:right"><button class="btn sm quiet" type="button" data-delcase="${esc(n)}" aria-label="Usuń sprawę ${esc(n)}">Usuń</button></td></tr>`; }).join("")}
     </tbody></table></div></section>` : ""}
     ${sessionsHtml()}
   </div>`;
@@ -750,7 +779,8 @@ $("#pickFolder").onchange = (e) => { intake([...e.target.files].map(f => ({ file
 const queue = []; let running = 0, total = 0, done = 0, firstCase = null;
 function intake(list) {
   const ok = list.filter(x => /\.(pdf|zip)$/i.test(x.file.name));
-  if (list.length - ok.length) say(`Pominięto ${list.length - ok.length} plików, które nie są PDF ani ZIP.`);
+  const nOther = list.length - ok.length;
+  if (nOther) say(`Pominięto ${nOther} ${plural(nOther, "plik, który nie jest", "pliki, które nie są", "plików, które nie są")} PDF ani ZIP.`);
   const addTo = S.addTo, replace = S.replaceItem; S.addTo = null; S.replaceItem = null;
   if (replace && ok.length) { const i = S.items.indexOf(replace); if (i >= 0) S.items.splice(i, 1); }
   ok.forEach(x => {
@@ -905,22 +935,22 @@ function renderCase() {
       <div class="crumb"><button type="button" data-go="start">Sprawy</button> / ${esc(name)}</div>
       <h1>${esc(title)}</h1>
       <div class="meta">${zp.numer_postepowania ? `<span>Postępowanie <b>${esc(zp.numer_postepowania)}</b></span>` : ""}${zp.numer_bzp ? `<span>BZP <b>${esc(zp.numer_bzp)}</b></span>` : ""}${zp.numer_ted ? `<span>TED <b>${esc(zp.numer_ted)}</b></span>` : ""}${ok.czynnosc_dzien ? `<span>Czynność <b>${fmtDate(ok.czynnosc_dzien)}</b>${ok.czynnosc_opis ? ": " + esc(ok.czynnosc_opis.toLowerCase()) : ""}</span>` : ""}</div>
-    </div><div class="actions"><button class="btn" type="button" id="delCase">Usuń sprawę</button><button class="btn" type="button" id="zipCase">Pobierz ZIP sprawy</button><button class="btn primary" type="button" data-go="kontrola">Kontrola formalna</button></div></div>
+    </div><div class="actions"><button class="btn quiet" type="button" id="delCase">Usuń sprawę</button><button class="btn" type="button" id="zipCase" title="Dane wszystkich dokumentów sprawy (JSON w formacie UZP)">Pobierz dane sprawy</button><button class="btn primary" type="button" data-go="kontrola">Kontrola formalna i pismo</button></div></div>
 
     <section class="stats" aria-label="Stan teczki">
       <div class="card stat"><div class="l">Dokumenty w teczce</div><div class="v">${its.length}</div><div class="s">${pend ? `${pend} w analizie · ` : ""}${recog} rozpoznane, ${rej} ${plural(rej, "odrzucony", "odrzucone", "odrzuconych")}</div></div>
-      <div class="card stat"><div class="l">Pola do sprawdzenia</div><div class="v ${todo ? "warn" : "ok"}">${todo}</div><div class="s">puste, z modelu językowego albo z błędną sumą</div></div>
+      <div class="card stat"><div class="l">Pola do sprawdzenia</div><div class="v ${todo ? "warn" : "ok"}">${todo}</div><div class="s">${todo ? "brakujące lub niepewne wartości, kliknij dokument poniżej" : "wszystkie dane sprawdzone"}</div></div>
       <div class="card stat"><div class="l">Kompletność formalna</div><div class="v ${!ch ? "" : misses.length ? "bad" : "ok"}">${!ch ? "…" : misses.length ? `${misses.length} ${plural(misses.length, "brak", "braki", "braków")}` : "bez braków"}</div><div class="s">${ch ? (misses.map(x => esc(x.opis.toLowerCase())).slice(0, 2).join(", ") || (ch.podsumowanie.pominiete ? `${ch.podsumowanie.pominiete} ${plural(ch.podsumowanie.pominiete, "pozycja pominięta", "pozycje pominięte", "pozycji pominiętych")} przez referenta` : "wszystkie wymagania spełnione")) : "liczenie…"}</div></div>
       <div class="card stat"><div class="l">${esc(term?.opis || "Termin")}</div><div class="v">${term?.do ? fmtDate(term.do) : "—"}</div><div class="s">${term?.do ? `${term.dni} dni od czynności${term.przesuniety ? ", przesunięty na dzień roboczy" : ""}` : "brak daty czynności"}</div></div>
     </section>
 
     <div class="cols">
       <section class="card wide" aria-labelledby="h-teczka">
-        <div class="card-h"><h2 id="h-teczka">Teczka sprawy</h2><button class="btn sm" type="button" data-pick="pickFiles">Dodaj pliki</button></div>
-        <div class="tw"><table><thead><tr><th>Dokument</th><th>Typ</th><th>Pewność</th><th>Weryfikacja</th></tr></thead><tbody>
+        <div class="card-h"><h2 id="h-teczka">Teczka sprawy</h2><span class="st-muted" style="font-size:13px">Kliknij dokument, aby sprawdzić dane</span><button class="btn sm" type="button" data-pick="pickFiles">Dodaj pliki</button></div>
+        <div class="tw"><table><thead><tr><th>Plik</th><th>Rodzaj dokumentu</th><th title="Jak pewne jest rozpoznanie rodzaju dokumentu">Pewność</th><th>Stan sprawdzenia</th></tr></thead><tbody>
         ${its.map((it, i) => { const s = stateOf(it), c = counts(it), conf = confidence(it);
-          const ver = s === "pending" ? '<span class="spinner"></span> analiza…' : s === "err" ? `<span class="st-bad">błąd</span>` : s === "rej" ? '<span class="st-muted">pusty JSON {}</span>' : c.todo ? `<span class="st-warn">${c.todo} ${plural(c.todo, "pole", "pola", "pól")} do sprawdzenia</span>` : '<span class="st-ok">zatwierdzone</span>';
-          return `<tr class="click" data-doc="${i}" tabindex="0"><td><b>${esc(it.plik)}</b></td><td>${s === "pending" ? "" : tag(it.klasa)}</td><td>${it.klasa ? conf.level : '<span class="st-muted">—</span>'}</td><td>${ver}</td></tr>`; }).join("")}
+          const ver = s === "pending" ? '<span class="spinner"></span> analiza…' : s === "err" ? `<span class="st-bad">błąd</span>` : s === "rej" ? '<span class="st-muted">nierozpoznany, bez danych</span>' : c.todo ? `<span class="st-warn">${c.todo} ${plural(c.todo, "pole", "pola", "pól")} do sprawdzenia</span>` : '<span class="st-ok">zatwierdzone</span>';
+          return `<tr class="click" data-doc="${i}" tabindex="0"><td><b>${esc(it.plik)}</b></td><td>${s === "pending" ? "" : tag(it.klasa)}</td><td>${it.klasa ? conf.level : '<span class="st-muted">—</span>'}</td><td class="nw">${ver}</td></tr>`; }).join("")}
         </tbody></table></div>
       </section>
       <div class="narrow">
@@ -948,10 +978,10 @@ function relatedCases(name, zp) {
 /* ---------- kolejka weryfikacji ---------- */
 function renderQueue() {
   const list = S.items.filter(i => i.klasa && matches(i)).map(i => ({ i, c: counts(i) })).sort((a, b) => b.c.todo - a.c.todo);
-  $("#main").innerHTML = `<div class="page"><div><h1>Kolejka weryfikacji</h1><p class="lead">Dokumenty z polami do sprawdzenia: puste, uzupełnione przez model językowy, z uwagami albo z błędną sumą kontrolną. Zatwierdzenie pola zapisuje się w dzienniku zmian.</p></div>
-    <section class="card">${list.length ? `<div class="tw"><table><thead><tr><th>Dokument</th><th>Sprawa</th><th>Typ</th><th>Do sprawdzenia</th><th>Zatwierdzone</th></tr></thead><tbody>
+  $("#main").innerHTML = `<div class="page"><div><h1>Kolejka weryfikacji</h1><p class="lead">Dokumenty, w których coś wymaga Twojej uwagi: pole nie zostało znalezione, wartość podał model AI albo numer (NIP, REGON, rachunek) ma błędną sumę kontrolną. Każde zatwierdzenie trafia do dziennika zmian.</p></div>
+    <section class="card">${list.length ? `<div class="tw"><table><thead><tr><th>Plik</th><th>Sprawa</th><th>Rodzaj dokumentu</th><th>Do sprawdzenia</th><th>Zatwierdzone</th></tr></thead><tbody>
     ${list.map(({ i, c }, k) => `<tr class="click" data-k="${k}" tabindex="0"><td><b>${esc(i.plik)}</b></td><td>${esc(i.sprawa)}</td><td>${tag(i.klasa)}</td><td>${c.todo ? `<span class="st-warn">${c.todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${c.done} z ${c.total}</td></tr>`).join("")}
-    </tbody></table></div>` : `<div class="empty"><h3>Kolejka jest pusta</h3>Wczytaj dokumenty, aby je zweryfikować.</div>`}</section></div>`;
+    </tbody></table></div>` : `<div class="empty"><h3>Nie ma nic do sprawdzenia</h3>Po wczytaniu dokumentów pojawią się tu te, które wymagają uwagi.</div>`}</section></div>`;
   $$("tr[data-k]").forEach(r => { const open = () => go("dokument", { item: list[+r.dataset.k].i }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
 }
 
@@ -967,8 +997,16 @@ function confidence(it) {
 }
 
 /* ---------- weryfikacja dokumentu ---------- */
-function humanize(s) { const A = new Set(["nip", "krs", "regon", "bzp", "ted", "kio", "pesel", "id"]); if (A.has(String(s).toLowerCase())) return String(s).toUpperCase(); s = String(s).replace(/[_-]+/g, " ").replace(/([a-ząćęłńóśźż])([A-ZĄĆĘŁŃÓŚŹŻ])/g, "$1 $2").trim(); return s.charAt(0).toUpperCase() + s.slice(1); }
+/* Nazwy pól z JSON (bez polskich znaków) jako czytelne etykiety: "miejscowosc" -> "Miejscowość". */
+const PL_WORDS = { odwolanie: "odwołanie", odwolujacy: "odwołujący", zamawiajacy: "zamawiający", miejscowosc: "miejscowość", prowadzacy: "prowadzący", postepowanie: "postępowanie", postepowania: "postępowania", zamowienie: "zamówienie", pelnomocnik: "pełnomocnik", pelnomocnika: "pełnomocnika", pelnomocnicy: "pełnomocnicy", pelnomocnictwo: "pełnomocnictwo", czynnosc: "czynność", dzien: "dzień", powod: "powód", tytul: "tytuł", imie: "imię", podpisujacy: "podpisujący", mail: "e-mail", kwota: "kwota", ogloszenia: "ogłoszenia", wplywu: "wpływu", zrodlo: "źródło" };
+function humanize(s) {
+  const A = new Set(["nip", "krs", "regon", "bzp", "ted", "kio", "pesel", "id"]);
+  s = String(s).replace(/[_-]+/g, " ").replace(/([a-ząćęłńóśźż])([A-ZĄĆĘŁŃÓŚŹŻ])/g, "$1 $2").trim();
+  s = s.split(/\s+/).map((w, i) => { const l = w.toLowerCase(); return A.has(l) ? l.toUpperCase() : (PL_WORDS[l] || (i ? l : w)); }).join(" ");
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 function specFor(it, path) { const c = S.classes?.find(x => x.nazwa === it.klasa); const g = path.replace(/\[\d+\]/g, "[*]"); return c?.pola.find(p => p.sciezka === path || p.sciezka === g); }
+function fieldLabel(pth) { pth = String(pth || ""); if (!pth || /\s|^\(/.test(pth) || !/[._\[]/.test(pth)) return pth; const last = pth.split(".").pop().replace(/\[\d+\]/, ""); const h = humanize(last), lo = h === h.toUpperCase() ? h : h.charAt(0).toLowerCase() + h.slice(1); return pth.includes(".") ? `${groupOf(pth)}: ${lo}` : h; }
 function groupOf(path) { const head = path.split(".")[0], m = head.match(/^(.*)\[(\d+)\]$/); return m ? `${humanize(m[1])} ${+m[2] + 1}` : humanize(head); }
 function setPath(obj, path, val) {
   const keys = path.match(/[^.[\]]+/g); let o = obj;
@@ -1040,28 +1078,28 @@ function renderPanelInner() {
   const maxPts = Math.max(1, ...Object.values(conf.pts || {}), ...Object.values(conf.thr || {}).map(x => x * 2));
   const bars = (conf.sorted || []).map(([n, v]) => { const thr = conf.thr?.[n] ?? 5; return `<div class="bar ${n === it.klasa ? "win" : ""}"><span>${esc(kindLabel(n))}</span><span class="track" role="img" aria-label="${esc(kindLabel(n))}: ${v} pkt, próg ${thr}"><span class="fill" style="width:${Math.max(0, v) / maxPts * 100}%"></span><span class="thr" style="left:${thr / maxPts * 100}%"></span></span><span class="v">${v} pkt</span></div>`; }).join("");
   const hits = (t.klasyfikacja?.trafienia || []).map(h => `<li><code>${esc(h)}</code></li>`).join("");
-  const facts = `<div class="facts"><span>Strony: <b>${t.strony ?? "?"}</b></span><span>OCR: <b>${t.ocr_strony?.length ? "str. " + t.ocr_strony.join(", ") : "niepotrzebny"}</b></span><span>LLM: <b>${t.llm_uzyty ? "użyty" : "nie"}</b>${t.llm_blad ? ` <span class="st-bad">(${esc(t.llm_blad)})</span>` : ""}</span><span>Czas: <b>${t.czas_s ?? "?"} s</b></span></div>`;
+  const facts = `<div class="facts"><span>Strony: <b>${t.strony ?? "?"}</b></span><span>OCR: <b>${t.ocr_strony?.length ? "str. " + t.ocr_strony.join(", ") : "niepotrzebny"}</b></span><span>Model AI: <b>${t.llm_uzyty ? "użyty" : "nie"}</b>${t.llm_blad ? ` <span class="st-bad">(${esc(t.llm_blad)})</span>` : ""}</span><span>Czas: <b>${t.czas_s ?? "?"} s</b></span></div>`;
   const others = S.items.filter(i => i !== it && i.klasa && counts(i).todo > 0);
   if (!it.klasa) {
     p.innerHTML = `<div class="panel-h"><div class="kind">${tag(null)}<h2>${esc(it.plik)}</h2></div></div>
-      <div class="alert warn"><h3>Dokument nie został rozpoznany</h3><p>Treść nie pasuje do żadnej skonfigurowanej klasy. Może to być inny dokument z akt albo podróbka. Wynikiem jest pusty plik JSON: <code>${esc(S.status?.pusty_json ?? "{}")}</code></p></div>
-      <div style="padding:0 18px"><b style="font-size:14px">Punkty dopasowania do klas</b><div class="bars">${bars}</div>${facts}</div>
+      <div class="alert warn"><h3>Dokument nie został rozpoznany</h3><p>Treść nie pasuje do odwołania, pełnomocnictwa ani potwierdzenia przelewu. Może to być inny dokument z akt. AktoMat nie odczytuje z niego danych (wynik: pusty plik <code>${esc(S.status?.pusty_json ?? "{}")}</code>).</p></div>
+      <div style="padding:0 18px"><b style="font-size:14px">Dopasowanie do znanych rodzajów dokumentów</b><div class="bars">${bars}</div>${facts}</div>
       <div class="panel-f" style="margin-top:auto"><span class="hint"></span><button class="btn" type="button" id="dl">Pobierz pusty JSON</button>${others.length ? '<button class="btn primary" type="button" id="next">Następny do sprawdzenia</button>' : ""}</div>`;
     bindPanelFoot(it, others); return;
   }
   p.innerHTML = `<div class="panel-h">
       <div class="kind">${tag(it.klasa)}<h2>${esc(it.plik)}</h2><span class="conf">pewność <b>${conf.level}</b></span></div>
-      <details><summary>Dlaczego ${esc(kindLabel(it.klasa).toLowerCase())}?</summary><div class="bars">${bars}</div>${hits ? `<ul style="margin:6px 0 0;padding-left:18px;color:var(--muted)">${hits}</ul>` : ""}${facts}</details>
+      <details><summary>Dlaczego rozpoznano jako: ${esc(kindLabel(it.klasa).toLowerCase())}?</summary><div class="bars">${bars}</div>${hits ? `<ul style="margin:6px 0 0;padding-left:18px;color:var(--muted)">${hits}</ul>` : ""}${facts}</details>
       <div class="bar6" aria-hidden="true"><i id="progBar" style="width:${c.total ? c.done / c.total * 100 : 0}%"></i></div>
       <div class="prog"><span id="progTxt">${c.done} z ${c.total} pól zatwierdzonych</span><span id="todoTxt">${c.todo ? `${c.todo} do sprawdzenia` : "wszystko sprawdzone"}</span></div>
     </div>
     <div class="toolbar">
       <span class="seg" role="group" aria-label="Filtr pól">${[["todo", "Do sprawdzenia"], ["done", "Zatwierdzone"], ["all", "Wszystkie"]].map(([k, l]) => `<button type="button" data-filter="${k}" aria-pressed="${S.filter === k && S.tab === "dane"}">${l}</button>`).join("")}</span>
       <span class="grow"></span>
-      <span class="seg" role="group" aria-label="Widok">${[["dane", "Pola"], ["json", "JSON"], ["slad", "Ślad"]].map(([k, l]) => `<button type="button" data-tab="${k}" aria-pressed="${S.tab === k}">${l}</button>`).join("")}</span>
+      <span class="seg" role="group" aria-label="Widok">${[["dane", "Dane"], ["json", "JSON"], ["slad", "Szczegóły"]].map(([k, l]) => `<button type="button" data-tab="${k}" aria-pressed="${S.tab === k}">${l}</button>`).join("")}</span>
     </div>
     <div class="fields" id="fields">${S.tab === "json" ? `<pre>${esc(JSON.stringify(it.json, null, 2))}</pre>` : S.tab === "slad" ? `<pre>${esc(JSON.stringify(t, null, 2))}</pre>` : fieldsHtml(it)}</div>
-    <div class="panel-f"><span class="hint">Enter zatwierdza pole i przechodzi do następnego. Zmiany trafiają do dziennika.</span>
+    <div class="panel-f"><span class="hint">Enter zatwierdza pole i przechodzi do następnego.</span>
       <button class="btn" type="button" id="dl">Pobierz JSON</button>
       ${c.todo ? '<button class="btn" type="button" id="approveAll">Zatwierdź wszystkie</button>' : ""}
       ${others.length ? '<button class="btn primary" type="button" id="next">Następny do sprawdzenia</button>' : `<button class="btn primary" type="button" id="toCase">Wróć do sprawy</button>`}</div>`;
@@ -1098,8 +1136,8 @@ function fieldMsg(it, pth, f) {
   const v = valOf(it, pth), val = validation(it, pth);
   if (val && val.ok === false) return `<span class="st-bad">Błędna suma kontrolna ${VNAME[val.typ] || val.typ}. Sprawdź z dokumentem.</span>`;
   if (val && val.ok === true) return `<span class="st-ok">Suma kontrolna ${VNAME[val.typ] || val.typ} poprawna</span>`;
-  if (v == null) return `<span class="st-warn">Nie znaleziono w dokumencie. Uzupełnij albo zatwierdź jako puste.</span>`;
-  if (f.zrodlo === "LLM" && !(pth in it.edits)) return `<span class="st-warn">Wartość z modelu językowego: porównaj z dokumentem.</span>`;
+  if (v == null) return `<span class="st-warn">Nie znaleziono w dokumencie. Wpisz wartość albo zatwierdź pole jako puste.</span>`;
+  if (f.zrodlo === "LLM" && !(pth in it.edits)) return `<span class="st-warn">Wartość podał model AI. Porównaj ją z dokumentem.</span>`;
   return "";
 }
 function fieldHtml(it, pth, f) {
@@ -1108,9 +1146,9 @@ function fieldHtml(it, pth, f) {
   const ev = f.cytat ? `<div class="ev">${f.strona ? `str. ${f.strona}: ` : ""}„${highlight(f.cytat, f.reguly ?? f.wartosc)}”</div>` : "";
   const notes = (f.uwagi || []).map(n => `<div class="ev st-bad">${esc(n)}</div>`).join("");
   return `<div class="field ${S.activePath === pth ? "active" : ""} ${ok ? "done" : ""}" data-path="${esc(pth)}">
-    <div class="top"><label for="${id}" title="${esc(spec?.opis || "")}">${esc(name)}</label><span class="path">${esc(pth)}</span>
-      <span class="r"><span class="badge b-${esc(src)}" title="Źródło: ${esc(SRC[src] || src)}">${esc(src === "reguły" ? "reguła" : src)}</span>${f.strona || f.cytat ? `<button type="button" class="pgbtn" data-loc="1" aria-label="Pokaż w dokumencie">${f.strona ? "str. " + f.strona : "pokaż"}</button>` : ""}</span></div>
-    <input id="${id}" class="${isNull ? "null" : ""}" value="${isNull ? "" : esc(v)}" placeholder="nie znaleziono w dokumencie (null)" data-edit="1" autocomplete="off" spellcheck="false">
+    <div class="top"><label for="${id}" title="${esc((spec?.opis ? spec.opis + "\n" : "") + "Pole w JSON: " + pth)}">${esc(name)}</label>
+      <span class="r"><span class="badge b-${esc(src)}" title="Skąd pochodzi wartość: ${esc(SRC[src] || src)}">${esc(BADGE[src] || src)}</span>${f.strona || f.cytat ? `<button type="button" class="pgbtn" data-loc="1" aria-label="Pokaż w dokumencie">${f.strona ? "str. " + f.strona : "pokaż"}</button>` : ""}</span></div>
+    <input id="${id}" class="${isNull ? "null" : ""}" value="${isNull ? "" : esc(v)}" placeholder="nie znaleziono w dokumencie" data-edit="1" autocomplete="off" spellcheck="false">
     <div class="fb"><span class="msg" data-msg="1">${fieldMsg(it, pth, f)}</span>${ok ? `<span class="ok-mark">✓ zatwierdzone</span><button type="button" class="btn sm" data-unok="1">Cofnij</button>` : `<button type="button" class="btn sm primary" data-ok="1">Zatwierdź</button>`}</div>
     ${ev}${notes}</div>`;
 }
@@ -1145,7 +1183,7 @@ function applyEdit(it, pth, text) {
   if (JSON.stringify(val) === JSON.stringify(f.wartosc ?? null)) delete it.edits[pth]; else it.edits[pth] = val;
   it.json = clone(it.orig); Object.entries(it.edits).forEach(([k, v]) => setPath(it.json, k, v));
   logEntry(it, pth, "zmieniono wartość", prev, val);
-  say(`Zmieniono pole ${pth}.`);
+  say(`Zmieniono pole: ${fieldLabel(pth)}.`);
   recheck(it.sprawa, 300);
 }
 function approve(it, pth, advance) {
@@ -1357,7 +1395,7 @@ function letterHtml(name) {
   if (!st.tpl) return "";
   const { items } = fillLetter(name, st);
   return `<section class="card" aria-labelledby="h-pismo" style="margin-top:16px">
-    <div class="card-h"><h2 id="h-pismo">Projekt pisma o uzupełnienie braków</h2><span class="st-muted" style="font-size:13px">szablon: <code>config/pisma.yaml</code></span></div>
+    <div class="card-h"><h2 id="h-pismo">Projekt pisma o uzupełnienie braków</h2></div>
     <div class="letter-b">
       <div class="letter-side">
         <p style="margin:0;color:var(--muted)">Szablon wypełniony danymi sprawy i brakami z kontroli, bez pozycji pominiętych. Referent poprawia tekst i podpisuje pismo we własnym systemie.</p>
@@ -1365,7 +1403,7 @@ function letterHtml(name) {
         <label for="lSyg">Sygnatura</label><input id="lSyg" value="${esc(st.syg)}" placeholder="np. KIO 1234/26" autocomplete="off">
         <label for="lDate">Data pisma</label><input id="lDate" value="${esc(st.data)}">
         <div class="lbr"><b>${items.length ? `${items.length} ${plural(items.length, "brak", "braki", "braków")} w wezwaniu` : "Brak pozycji do wezwania"}</b>${items.length ? `<ol>${items.map(x => `<li>${esc(x.opis)}</li>`).join("")}</ol>` : `<div class="st-muted" style="font-size:13px;margin-top:4px">Kontrola nie wykazała braków albo wszystkie zostały pominięte.</div>`}</div>
-        <div class="st-muted" style="font-size:12.5px">W pliku .docx: <code>#</code> tytuł, <code>&gt;</code> do prawej, <code>**tekst**</code> pogrubienie.</div>
+        <details style="margin:0"><summary>Formatowanie w pliku .docx</summary><div class="st-muted" style="margin-top:4px">Linia zaczęta od <code>#</code> to tytuł, od <code>&gt;</code> jest wyrównana do prawej, <code>**tekst**</code> to pogrubienie.</div></details>
         <div class="st-warn" id="lEdited" style="font-size:13px" ${st.edited ? "" : "hidden"}>Tekst edytowany ręcznie: zmiany w sprawie go nie nadpisują.</div>
         <div class="acts"><button class="btn primary" type="button" id="lDocx">Pobierz .docx</button><button class="btn" type="button" id="lCopy">Kopiuj tekst</button><button class="btn" type="button" id="lReset" ${st.edited ? "" : "hidden"}>Wygeneruj ponownie</button></div>
       </div>
@@ -1507,7 +1545,7 @@ function renderTerms() {
   const res = start ? calcDeadline(start, days) : null;
   const upcoming = (regState.rows || []).filter(r => r.termin && daysTo(r.termin) >= 0).sort((a, b) => a.termin.localeCompare(b.termin)).slice(0, 8);
   $("#main").innerHTML = `<div class="page">
-    <div class="headrow"><div><h1>Kalkulator terminów</h1><p class="lead">Rodzaje terminów, liczby dni i święta są w <code>config/kontrola.yaml</code>. Ostatni dzień przypadający w sobotę, niedzielę albo święto przesuwa się na najbliższy dzień roboczy. Wynik to podpowiedź dla referenta.</p></div></div>
+    <div class="headrow"><div><h1>Kalkulator terminów</h1><p class="lead">Wybierz rodzaj terminu i datę zdarzenia. Jeśli ostatni dzień wypada w sobotę, niedzielę albo święto, termin przesuwa się na najbliższy dzień roboczy. Wynik to podpowiedź dla referenta.</p><p class="src-note">Rodzaje terminów i święta: <code>config/kontrola.yaml</code></p></div></div>
     <div class="cols">
       <div class="wide" style="display:flex;flex-direction:column;gap:16px">
         <section class="card card-b"><div class="tc-grid">
@@ -1522,7 +1560,7 @@ function renderTerms() {
             <p style="margin:10px 0 0;font-size:14px;color:var(--muted)">${days} ${plural(days, "dzień", "dni", "dni")} od ${plOf(start)}.${res.skipped.length ? ` Koniec terminu wypadał ${res.skipped.length > 1 ? "w dni wolne" : "w dzień wolny"} (${res.skipped.map(x => fmtDate(x)).join(", ")}), więc przesunięto go na najbliższy dzień roboczy.` : ""}</p>` : '<p class="st-muted">Podaj datę zdarzenia.</p>'}</div>
         </div></section>
         ${res ? `<section class="card card-b"><h2 style="margin-bottom:10px">Kalendarz terminu</h2><div class="tc-grid">${(() => { const out = []; let y = start.getFullYear(), mo = start.getMonth(); for (let k = 0; k < 3; k++) { out.push(`<div>${miniCal(y, mo, start, res.end, res.skipped)}</div>`); if (y === res.end.getFullYear() && mo === res.end.getMonth()) break; mo++; if (mo > 11) { mo = 0; y++; } } return out.join(""); })()}</div>
-          <p class="st-muted" style="font-size:12.5px;margin:10px 0 0">Ramka: dzień zdarzenia · tło: bieg terminu · wypełnienie: ostatni dzień · żółte: dzień wolny, z którego przesunięto termin · czerwone cyfry: weekendy i święta.</p></section>` : ""}
+          <p class="st-muted" style="font-size:13px;margin:10px 0 0">W ramce dzień zdarzenia, na jasnym tle bieg terminu, na ciemnym ostatni dzień. Na żółto dni wolne, z których przesunięto termin. Czerwone cyfry to weekendy i święta.</p></section>` : ""}
       </div>
       <div class="narrow">
         <section class="card card-b"><h2 style="margin-bottom:10px">Najbliższe terminy w sprawach</h2>
@@ -1553,20 +1591,20 @@ function renderControl() {
     <div class="headrow"><div>
       <div class="crumb"><button type="button" data-go="start">Sprawy</button> / <button type="button" data-go="sprawa">${esc(name)}</button> / Kontrola formalna</div>
       <h1>Kontrola formalna sprawy</h1>
-      <p class="lead">Reguły kontroli i terminy są w <code>config/kontrola.yaml</code>, tak jak klasy dokumentów. Wynik to podpowiedź dla referenta, nie rozstrzygnięcie.</p>
+      <p class="lead">Czy teczka jest kompletna, czy dokumenty są ze sobą zgodne i do kiedy można było wnieść odwołanie. Wynik to podpowiedź dla referenta, nie rozstrzygnięcie.</p>
     </div><div><span class="banner ${bad ? "bad" : warn ? "warn" : "ok"}">${bad ? `${bad} ${plural(bad, "brak formalny", "braki formalne", "braków formalnych")}` : "Bez braków formalnych"}${warn ? `, ${warn} ${plural(warn, "ostrzeżenie", "ostrzeżenia", "ostrzeżeń")}` : ""}</span></div></div>
 
     <div class="cols">
       <div class="wide" style="display:flex;flex-direction:column;gap:16px">
         <section class="card" aria-labelledby="h-zg"><div class="card-h"><h2 id="h-zg">Zgodność między dokumentami</h2></div>
-          <div class="tw"><table><thead><tr><th>Sprawdzenie</th><th>Wartość A</th><th>Wartość B</th><th>Wynik</th></tr></thead><tbody>
-          ${ch.zgodnosc.map(x => `<tr class="${x.wynik === "pominiete" ? "skipped-row" : ""}"><td>${esc(x.opis)}${x.szczegoly && x.wynik !== "ok" ? `<div class="st-muted" style="font-size:12.5px">${esc(x.szczegoly)}</div>` : ""}<div class="checks">${skipNote(x)}</div></td><td>${fmt(x.a)}</td><td>${fmt(x.b)}</td><td>${res(x.wynik)}${x.wynik === "niezgodne" || x.wynik === "pominiete" ? `<div class="checks" style="margin-top:6px">${skipBtn(x).replace("skipbtn", "")}</div>` : ""}</td></tr>`).join("")}
+          <div class="tw"><table class="cmp"><thead><tr><th>Sprawdzenie</th><th>W pierwszym dokumencie</th><th>W drugim dokumencie</th><th>Wynik</th></tr></thead><tbody>
+          ${ch.zgodnosc.map(x => { const rr = (S.rules?.zgodnosc || []).find(r => r.id === x.id); return `<tr class="${x.wynik === "pominiete" ? "skipped-row" : ""}"><td>${esc(x.opis)}${x.szczegoly && x.wynik !== "ok" ? `<div class="st-muted" style="font-size:12.5px">${esc(x.szczegoly)}</div>` : ""}<div class="checks">${skipNote(x)}</div></td><td>${rr ? `<small>${esc(kindLabel(rr.a.klasa))}</small>` : ""}${fmt(x.a)}</td><td>${rr ? `<small>${esc(kindLabel(rr.b.klasa))}</small>` : ""}${fmt(x.b)}</td><td>${res(x.wynik)}${x.wynik === "niezgodne" || x.wynik === "pominiete" ? `<div class="checks" style="margin-top:6px">${skipBtn(x).replace("skipbtn", "")}</div>` : ""}</td></tr>`; }).join("")}
           </tbody></table></div></section>
         <section class="card" aria-labelledby="h-wym"><div class="card-h"><h2 id="h-wym">Wymagane dokumenty i pola</h2></div>
           <div class="card-b"><ul class="checks">${[...ch.wymagane, ...ch.pola].map(checkLi).join("")}</ul></div></section>
       </div>
       <div class="narrow">
-        <section class="card card-b" aria-labelledby="h-term"><h2 id="h-term" style="margin-bottom:12px">Kalkulator terminów</h2>
+        <section class="card card-b" aria-labelledby="h-term"><h2 id="h-term" style="margin-bottom:12px">Termin na wniesienie odwołania</h2>
           ${term ? `<div class="grid2"><label for="tStart" style="color:var(--muted)">Data czynności</label><input id="tStart" value="${esc(fmtDate(term.od || ""))}">
             <label for="tDays" style="color:var(--muted)">Liczba dni</label><select id="tDays">${(term.warianty || [term.dni]).map(d => `<option value="${d}" ${+d === +term.dni ? "selected" : ""}>${d} dni</option>`).join("")}</select></div>
             <div class="result" id="tRes">${term.do ? `${esc(term.opis)}: <b>${fmtDate(term.do)}</b> (${esc(term.dzien_tygodnia)})${term.przesuniety ? "<br><small>Przesunięty z dnia wolnego na najbliższy dzień roboczy.</small>" : ""}` : "Brak daty czynności w odwołaniu."}</div>` : '<p class="st-muted">Brak skonfigurowanych terminów.</p>'}
@@ -1576,17 +1614,18 @@ function renderControl() {
         </section>
         <section class="card card-b" aria-labelledby="h-exp"><h2 id="h-exp" style="margin-bottom:10px">Eksport sprawy</h2>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <label class="opt"><input type="checkbox" checked disabled>JSON zgodny ze schematami UZP (output/&lt;sprawa&gt;/)</label>
+            <label class="opt"><input type="checkbox" checked disabled>Dane dokumentów (JSON w formacie UZP)</label>
             <label class="opt"><input type="checkbox" id="xLog" checked>Dziennik zmian (CSV)</label>
             <label class="opt"><input type="checkbox" id="xCtl" checked>Raport kontroli formalnej (CSV)</label>
             <label class="opt"><input type="checkbox" id="xReg">Wiersz do rejestru spraw (CSV)</label>
             <label class="opt"><input type="checkbox" id="xAnon">Ukryj dane osobowe (imiona i nazwiska, e-maile, telefony, PESEL)</label>
           </div>
-          <button class="btn primary" type="button" id="xGo" style="width:100%;margin-top:12px">Pobierz ZIP</button>
+          <button class="btn primary" type="button" id="xGo" style="width:100%;margin-top:12px">Pobierz paczkę sprawy (ZIP)</button>
         </section>
       </div>
     </div>
     ${letterHtml(name)}
+    <p class="src-note">Reguły kontroli, terminy i święta: <code>config/kontrola.yaml</code>. Szablon pisma: <code>config/pisma.yaml</code>.</p>
   </div>`;
   $$("[data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   bindSkips(name);
@@ -1621,10 +1660,10 @@ function controlCsv(ch) { const sz = (x) => [x.szczegoly, x.pominiecie ? `pomini
 /* ---------- dziennik zmian ---------- */
 function renderLog() {
   const list = [...S.log].reverse();
-  $("#main").innerHTML = `<div class="page"><div class="headrow"><div><h1>Dziennik zmian</h1><p class="lead">Każda poprawka i zatwierdzenie pola: kto, kiedy, w którym dokumencie i co się zmieniło. Dziennik trafia też do ZIP-a z kontroli formalnej.</p></div>
+  $("#main").innerHTML = `<div class="page"><div class="headrow"><div><h1>Dziennik zmian</h1><p class="lead">Kto, kiedy i co zmienił: poprawki i zatwierdzenia pól, pominięte braki, wygenerowane pisma. Dziennik trafia też do paczki sprawy z kontroli formalnej.</p></div>
     <div class="actions"><button class="btn" type="button" id="logCsv" ${list.length ? "" : "disabled"}>Pobierz CSV</button></div></div>
-    <section class="card">${list.length ? `<div class="tw"><table><thead><tr><th>Czas</th><th>Referent</th><th>Dokument</th><th>Pole</th><th>Akcja</th><th>Z</th><th>Na</th></tr></thead><tbody>
-    ${list.map(l => `<tr><td>${new Date(l.czas).toLocaleString("pl-PL")}</td><td>${esc(l.kto || "—")}</td><td>${esc(l.sprawa)} / ${esc(l.plik)}</td><td class="mono">${esc(l.pole)}</td><td>${esc(l.akcja)}</td><td>${l.z == null ? '<span class="st-muted">—</span>' : esc(l.z)}</td><td>${l.na == null ? '<span class="st-muted">—</span>' : esc(l.na)}</td></tr>`).join("")}
+    <section class="card">${list.length ? `<div class="tw"><table><thead><tr><th>Czas</th><th>Referent</th><th>Dokument</th><th>Pole</th><th>Czynność</th><th>Było</th><th>Jest</th></tr></thead><tbody>
+    ${list.map(l => `<tr><td>${new Date(l.czas).toLocaleString("pl-PL")}</td><td>${esc(l.kto || "—")}</td><td>${esc(l.sprawa)} / ${esc(l.plik)}</td><td>${esc(fieldLabel(l.pole))}</td><td>${esc(l.akcja)}</td><td>${l.z == null ? '<span class="st-muted">—</span>' : esc(l.z)}</td><td>${l.na == null ? '<span class="st-muted">—</span>' : esc(l.na)}</td></tr>`).join("")}
     </tbody></table></div>` : `<div class="empty"><h3>Brak wpisów</h3>Zatwierdzenia i poprawki pól pojawią się tutaj.</div>`}</section></div>`;
   $("#logCsv").onclick = () => save(new Blob(["﻿" + logCsv(S.log)], { type: "text/csv" }), "dziennik_zmian.csv");
 }
@@ -1633,7 +1672,7 @@ function renderLog() {
 function renderClasses() {
   const list = S.classes || [], r = S.rules || {};
   $("#main").innerHTML = `<div class="page">
-    <div><h1>Klasy dokumentów i reguły kontroli</h1><p class="lead">Każda klasa to jeden plik w <code>config/classes/</code>, a reguły kontroli formalnej są w <code>config/kontrola.yaml</code>. Nowy typ dokumentu, pole albo sprawdzenie dodaje się w konfiguracji, bez zmian w kodzie.</p></div>
+    <div><h1>Typy dokumentów i reguły kontroli</h1><p class="lead">Każda klasa to jeden plik w <code>config/classes/</code>, a reguły kontroli formalnej są w <code>config/kontrola.yaml</code>. Nowy typ dokumentu, pole albo sprawdzenie dodaje się w konfiguracji, bez zmian w kodzie.</p></div>
     <div class="cls-grid">${list.map(c => `<article class="card cls-card"><h3>${tag(c.nazwa)}</h3><p>${esc(c.opis)}</p>
       <div class="kv"><span>Plik: <code>${esc(c.plik)}</code></span><span>Pola: <b>${c.pola.length}</b></span><span>Próg: <b>${c.prog} pkt</b></span><span>Słowa kluczowe: <b>${c.slowa_kluczowe}</b></span><span>Wykluczenia: <b>${c.wykluczenia}</b></span></div>
       <details><summary>Pola i źródła wartości</summary><div class="tw"><table><thead><tr><th>Ścieżka</th><th>Typ</th><th>Źródło</th></tr></thead><tbody>${c.pola.map(p => `<tr><td class="mono">${esc(p.sciezka)}</td><td>${esc(p.typ)}</td><td>${esc(p.zrodlo)}</td></tr>`).join("")}</tbody></table></div></details>
