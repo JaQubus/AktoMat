@@ -148,6 +148,32 @@
   .sesslist td .acts { display: flex; gap: 6px; justify-content: flex-end; }
   .sesslist tr.cur td:first-child b::after { content: "bieżąca"; margin-left: 8px; font-size: 11.5px; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 8px; }
 
+  /* ---------- rejestr spraw, kalkulator terminów ---------- */
+  .regbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .regbar input[type=search] { flex: 1 1 320px; height: 42px; border: 1px solid var(--line-strong); border-radius: 6px; padding: 0 12px; font: inherit; background: var(--panel); color: var(--ink); }
+  .regbar label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--muted); }
+  .regbar input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); }
+  table.reg td { vertical-align: top; }
+  table.reg td small { display: block; color: var(--muted); font-size: 12.5px; }
+  table.reg tr.click:hover td { background: var(--panel-2); }
+  .rel { display: inline-flex; align-items: center; gap: 4px; background: var(--llm-soft); color: var(--llm); border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin: 2px 4px 2px 0; white-space: nowrap; }
+  .due { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; margin-top: 3px; }
+  .due.past { background: var(--bad-soft); color: var(--bad); } .due.soon { background: var(--warn-soft); color: var(--warn); } .due.ok { background: var(--ok-soft); color: var(--ok); }
+  mark.hit { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
+  .tc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .tc-res { font-size: 15px; line-height: 1.5; }
+  .tc-res .big { font-size: 30px; font-weight: 700; letter-spacing: -.3px; color: var(--ink); }
+  .mcal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .mcal .h { text-align: center; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 0; }
+  .mcal .d { text-align: center; padding: 6px 0; border-radius: 6px; color: var(--ink); }
+  .mcal .d.out { visibility: hidden; }
+  .mcal .d.we, .mcal .d.hol { color: var(--bad); }
+  .mcal .d.in { background: var(--accent-soft); }
+  .mcal .d.start { box-shadow: inset 0 0 0 2px var(--accent); }
+  .mcal .d.end { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .mcal .d.skip { background: var(--warn-soft); color: var(--warn); }
+  .mcal-t { font-weight: 700; text-transform: capitalize; margin: 4px 0 6px; }
+
   /* ---------- okna i powiadomienia ---------- */
   .dlg .lbl { font-size: 13px; color: var(--muted); margin-bottom: -6px; }
   .dlg textarea { min-height: 84px; resize: vertical; border: 1px solid var(--line-strong); border-radius: 6px; padding: 10px 12px; font: inherit; font-size: 15px; background: var(--panel); color: var(--ink); }
@@ -537,6 +563,8 @@ function drawNav() {
     h += `<button class="nav sub" type="button" data-case="${esc(n)}" ${cur ? 'aria-current="page"' : ""} title="${esc(n)}"><span class="cn">${esc(n)}</span>${ch?.braki ? `<span class="n bad" title="braki formalne">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : `<span class="n st-muted">${caseItems(n).length}</span>`}</button>`;
   });
   h += `<div class="navsep"></div>
+    <button class="nav" type="button" data-go="rejestr" ${S.view === "rejestr" ? 'aria-current="page"' : ""}>Rejestr spraw</button>
+    <button class="nav" type="button" data-go="terminy" ${S.view === "terminy" ? 'aria-current="page"' : ""}>Kalkulator terminów</button>
     <button class="nav" type="button" data-go="klasy" ${S.view === "klasy" ? 'aria-current="page"' : ""}>Klasy i reguły (YAML)</button>
     <button class="nav" type="button" data-go="raport" ${S.view === "raport" ? 'aria-current="page"' : ""}>Raport jakości</button>
     <button class="nav" type="button" data-go="dziennik" ${S.view === "dziennik" ? 'aria-current="page"' : ""}>Dziennik zmian${S.log.length ? `<span class="n st-muted">${S.log.length}</span>` : ""}</button>`;
@@ -554,6 +582,8 @@ function render() {
   if (v === "kontrola" && S.caseName && caseItems(S.caseName).length) return renderControl();
   if (v === "kolejka") return renderQueue();
   if (v === "klasy") return renderClasses();
+  if (v === "rejestr") return renderRegistry();
+  if (v === "terminy") return renderTerms();
   if (v === "raport") return renderReport();
   if (v === "dziennik") return renderLog();
   S.view = "start"; renderStart();
@@ -581,6 +611,7 @@ async function saveSession() {
     if (!r.ok) throw new Error("HTTP " + r.status);
     const res = await r.json();
     sessState("zapisano " + new Date(res.zmieniono).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" }));
+    if (S.view !== "rejestr" && S.view !== "terminy") regState.rows = null;
   } catch (e) { sessState("błąd zapisu"); }
 }
 async function loadSessions() { try { S.sessions = await (await fetch("/api/sesje")).json(); } catch (e) { S.sessions = []; } return S.sessions; }
@@ -631,6 +662,26 @@ function bindSessions() {
   $("#regCsv") && ($("#regCsv").onclick = () => { save(new Blob(["﻿" + registerCsv(caseNames())], { type: "text/csv;charset=utf-8" }), "rejestr_spraw.csv"); say("Pobrano rejestr spraw."); });
 }
 
+/* ---------- usuwanie sprawy z sesji (także po kontroli) ---------- */
+async function deleteCase(name) {
+  const its = caseItems(name);
+  if (!its.length) return;
+  if (its.some(i => i.pending)) return say("Poczekaj, aż analiza dokumentów tej sprawy się skończy.", "warn");
+  const ok = await ask({ title: `Usunąć sprawę „${name}”?`, text: `Z sesji znikną ${its.length} ${plural(its.length, "dokument", "dokumenty", "dokumentów")} razem z poprawkami, zatwierdzeniami, pominięciami i projektem pisma. Wpisy w dzienniku zmian zostają. Tego nie da się cofnąć.`, ok: "Usuń sprawę", danger: true });
+  if (!ok) return;
+  S.items = S.items.filter(i => i.sprawa !== name);
+  delete S.skip[name]; delete S.letters[name]; delete S.checks[name]; delete S.checksRaw[name];
+  S.log.push({ czas: new Date().toISOString(), kto: S.who || "", sprawa: name, plik: "(sprawa)", pole: "", akcja: `usunięto sprawę (${its.length} dok.)`, z: null, na: null });
+  its.forEach(i => { if (i.id) fetch(`/api/pliki/${i.id}`, { method: "DELETE" }).catch(() => {}); });
+  regState.rows = null;
+  say(`Usunięto sprawę „${name}”.`);
+  if (S.caseName === name) S.caseName = null;
+  if (S.current && S.current.sprawa === name) S.current = null;
+  if (!S.items.length && S.sid) { clearTimeout(saveTimer); await saveSession(); }
+  else markDirty();
+  drawNav(); go("start");
+}
+
 /* ---------- rejestr spraw (kolumny z config/eksport.yaml) ---------- */
 function getPath(obj, path) {
   let o = obj;
@@ -658,15 +709,16 @@ function renderStart() {
       <p>Skany są odczytywane przez OCR. Dokumenty spoza skonfigurowanych klas dostają pusty JSON <code>{}</code>.</p>
       <div class="pickers"><button class="btn primary" type="button" data-pick="pickFiles">Wybierz pliki PDF</button><button class="btn" type="button" data-pick="pickFolder">Wybierz folder</button><button class="btn" type="button" data-pick="pickZip">Wybierz ZIP</button></div>
     </div>
-    ${names.length ? `<section class="card"><div class="card-h"><h2>Wczytane sprawy</h2><span style="flex:1"></span><button class="btn sm" type="button" id="regCsv">Rejestr spraw (CSV)</button><button class="btn sm" type="button" id="newSess">Nowa sesja</button></div><div class="tw"><table><thead><tr><th>Sprawa</th><th>Dokumenty</th><th>Pola do sprawdzenia</th><th>Kontrola formalna</th></tr></thead><tbody>
+    ${names.length ? `<section class="card"><div class="card-h"><h2>Wczytane sprawy</h2><span style="flex:1"></span><button class="btn sm" type="button" id="regCsv">Rejestr spraw (CSV)</button><button class="btn sm" type="button" id="newSess">Nowa sesja</button></div><div class="tw"><table><thead><tr><th>Sprawa</th><th>Dokumenty</th><th>Pola do sprawdzenia</th><th>Kontrola formalna</th><th><span class="sr-only">Akcje</span></th></tr></thead><tbody>
       ${names.filter(n => caseItems(n).some(matches)).map(n => { const its = caseItems(n), todo = its.reduce((a, i) => a + counts(i).todo, 0), ch = S.checks[n]?.podsumowanie;
-        return `<tr class="click" data-case="${esc(n)}"><td><b>${esc(n)}</b></td><td>${its.length}</td><td>${todo ? `<span class="st-warn">${todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${!ch ? '<span class="st-muted">…</span>' : ch.braki ? `<span class="st-bad">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : '<span class="st-ok">bez braków</span>'}</td></tr>`; }).join("")}
+        return `<tr class="click" data-case="${esc(n)}"><td><b>${esc(n)}</b></td><td>${its.length}</td><td>${todo ? `<span class="st-warn">${todo}</span>` : '<span class="st-ok">0</span>'}</td><td>${!ch ? '<span class="st-muted">…</span>' : ch.braki ? `<span class="st-bad">${ch.braki} ${plural(ch.braki, "brak", "braki", "braków")}</span>` : '<span class="st-ok">bez braków</span>'}</td><td style="text-align:right"><button class="btn sm" type="button" data-delcase="${esc(n)}" aria-label="Usuń sprawę ${esc(n)}">Usuń</button></td></tr>`; }).join("")}
     </tbody></table></div></section>` : ""}
     ${sessionsHtml()}
   </div>`;
   bindSessions();
   $$("[data-pick]").forEach(b => b.onclick = () => { S.addTo = null; S.replaceItem = null; $("#" + b.dataset.pick).click(); });
   $$("tr[data-case]").forEach(r => r.onclick = () => go("sprawa", { caseName: r.dataset.case }));
+  $$("[data-delcase]").forEach(b => b.onclick = (e) => { e.stopPropagation(); deleteCase(b.dataset.delcase); });
   const drop = $("#drop");
   drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
   drop.ondragleave = () => drop.classList.remove("over");
@@ -853,7 +905,7 @@ function renderCase() {
       <div class="crumb"><button type="button" data-go="start">Sprawy</button> / ${esc(name)}</div>
       <h1>${esc(title)}</h1>
       <div class="meta">${zp.numer_postepowania ? `<span>Postępowanie <b>${esc(zp.numer_postepowania)}</b></span>` : ""}${zp.numer_bzp ? `<span>BZP <b>${esc(zp.numer_bzp)}</b></span>` : ""}${zp.numer_ted ? `<span>TED <b>${esc(zp.numer_ted)}</b></span>` : ""}${ok.czynnosc_dzien ? `<span>Czynność <b>${fmtDate(ok.czynnosc_dzien)}</b>${ok.czynnosc_opis ? ": " + esc(ok.czynnosc_opis.toLowerCase()) : ""}</span>` : ""}</div>
-    </div><div class="actions"><button class="btn" type="button" id="zipCase">Pobierz ZIP sprawy</button><button class="btn primary" type="button" data-go="kontrola">Kontrola formalna</button></div></div>
+    </div><div class="actions"><button class="btn" type="button" id="delCase">Usuń sprawę</button><button class="btn" type="button" id="zipCase">Pobierz ZIP sprawy</button><button class="btn primary" type="button" data-go="kontrola">Kontrola formalna</button></div></div>
 
     <section class="stats" aria-label="Stan teczki">
       <div class="card stat"><div class="l">Dokumenty w teczce</div><div class="v">${its.length}</div><div class="s">${pend ? `${pend} w analizie · ` : ""}${recog} rozpoznane, ${rej} ${plural(rej, "odrzucony", "odrzucone", "odrzuconych")}</div></div>
@@ -884,6 +936,7 @@ function renderCase() {
   $$("tr[data-doc]").forEach(r => { const open = () => go("dokument", { item: its[+r.dataset.doc] }); r.onclick = open; r.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
   $$("a[data-case]").forEach(a => a.onclick = (e) => { e.preventDefault(); go("sprawa", { caseName: a.dataset.case }); });
   $("#zipCase").onclick = () => downloadZip(its, `aktomat_${name}.zip`);
+  $("#delCase").onclick = () => deleteCase(name);
   bindSkips(name);
 }
 function relatedCases(name, zp) {
@@ -1163,6 +1216,7 @@ function scrollToTarget(page, hls) {
 const MIES = ["styczeń", "luty", "marzec", "kwiecień", "maj", "czerwiec", "lipiec", "sierpień", "wrzesień", "październik", "listopad", "grudzień"];
 const MIES_D = ["stycznia", "lutego", "marca", "kwietnia", "maja", "czerwca", "lipca", "sierpnia", "września", "października", "listopada", "grudnia"];
 const DNI_K = ["pn", "wt", "śr", "cz", "pt", "so", "nd"];
+const DNI = ["poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"];
 const CAL_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M7.5 13.5h2M11 13.5h2M14.5 13.5h2M7.5 17h2M11 17h2"/></svg>';
 function parseAnyDate(v) {
   const t = String(v || "").trim(); let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/), d = null;
@@ -1343,6 +1397,146 @@ function bindLetter(name) {
     S.log.push({ czas: new Date().toISOString(), kto: S.who || "", sprawa: name, plik: "(pismo)", pole: st.tpl.nazwa || st.tpl.id, akcja: "wygenerowano pismo .docx", z: null, na: st.syg || null });
     drawNav();
   };
+}
+
+
+/* ---------- rejestr spraw: wszystkie zapisane sesje, wyszukiwarka, powiązane odwołania ---------- */
+const daysTo = (iso) => { const d = parseAnyDate(iso); if (!d) return null; const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((d - t) / 864e5); };
+function dueBadge(iso) {
+  const n = daysTo(iso); if (n == null) return "";
+  if (n < 0) return `<span class="due past">minął ${-n} ${plural(-n, "dzień", "dni", "dni")} temu</span>`;
+  if (n === 0) return `<span class="due soon">dziś</span>`;
+  return `<span class="due ${n <= 3 ? "soon" : "ok"}">za ${n} ${plural(n, "dzień", "dni", "dni")}</span>`;
+}
+function hit(text, q) {
+  const t = esc(text ?? ""); if (!q || !text) return t || '<span class="st-muted">—</span>';
+  const words = q.split(/\s+/).filter(w => w.length > 1).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  return words.length ? t.replace(new RegExp(`(${words.join("|")})`, "gi"), '<mark class="hit">$1</mark>') : t;
+}
+const regState = { q: "", braki: false, pow: false, rows: null, loading: false };
+async function loadRegistry() {
+  regState.loading = true;
+  if (S.sid) { clearTimeout(saveTimer); await saveSession(); }
+  try { regState.rows = await (await fetch("/api/rejestr")).json(); } catch (e) { regState.rows = []; say("Nie udało się wczytać rejestru spraw."); }
+  regState.loading = false;
+}
+function regFiltered() {
+  const words = regState.q.toLowerCase().split(/\s+/).filter(Boolean), dig = (x) => String(x || "").replace(/\D/g, "");
+  return (regState.rows || []).filter(r => {
+    if (regState.braki && !r.braki.length) return false;
+    if (regState.pow && !r.powiazane.length) return false;
+    const hay = [r.sprawa, r.sesja_nazwa, r.odwolujacy, r.nip, r.zamawiajacy, r.nip_zamawiajacego, r.numer_postepowania, r.numer_bzp, r.numer_ted, r.referent].join(" ").toLowerCase();
+    const hayDig = [r.nip, r.nip_zamawiajacego, r.numer_bzp, r.numer_ted, r.numer_postepowania].map(dig).join(" ");
+    return words.every(w => hay.includes(w) || (dig(w).length >= 4 && hayDig.includes(dig(w))));
+  });
+}
+async function openCase(sesja, sprawa) {
+  if (sesja !== S.sid && !(await openSession(sesja, true))) return say("Nie udało się otworzyć sesji tej sprawy.");
+  go("sprawa", { caseName: sprawa });
+}
+function renderRegistry() {
+  const m = $("#main");
+  if (!regState.rows) {
+    m.innerHTML = `<div class="page"><div class="empty"><span class="spinner"></span><h3>Wczytywanie rejestru…</h3></div></div>`;
+    if (!regState.loading) loadRegistry().then(() => S.view === "rejestr" && render());
+    return;
+  }
+  const rows = regFiltered(), q = regState.q, relCount = (regState.rows || []).filter(r => r.powiazane.length).length;
+  m.innerHTML = `<div class="page">
+    <div class="headrow"><div><h1>Rejestr spraw</h1><p class="lead">Wszystkie sprawy ze wszystkich zapisanych sesji. Szukaj po NIP, numerze ogłoszenia BZP lub TED, numerze postępowania albo nazwie. Odwołania w tym samym postępowaniu są oznaczone jako powiązane.</p></div>
+      <div class="actions"><button class="btn" type="button" id="regRefresh">Odśwież</button><button class="btn primary" type="button" id="regDl" ${rows.length ? "" : "disabled"}>Pobierz CSV</button></div></div>
+    <section class="card">
+      <div class="regbar">
+        <label class="sr-only" for="regQ">Szukaj w rejestrze</label>
+        <input id="regQ" type="search" value="${esc(q)}" placeholder="np. 5260250995, 2026/BZP00999778, ZS.791.2026, Belmoria" autocomplete="off">
+        <label><input type="checkbox" id="regBraki" ${regState.braki ? "checked" : ""}>Tylko z brakami</label>
+        <label><input type="checkbox" id="regPow" ${regState.pow ? "checked" : ""}>Tylko powiązane (${relCount})</label>
+        <span class="st-muted" style="font-size:13px">${rows.length} z ${regState.rows.length}</span>
+      </div>
+      ${rows.length ? `<div class="tw"><table class="reg"><thead><tr><th>Sprawa</th><th>Odwołujący</th><th>Zamawiający</th><th>Postępowanie</th><th>Termin</th><th>Braki</th><th>Powiązane</th></tr></thead><tbody>
+      ${rows.map((r, i) => `<tr class="click" data-r="${i}" tabindex="0">
+        <td><b>${hit(r.sprawa, q)}</b><small>${hit(r.sesja_nazwa, q)}${r.referent ? " · " + esc(r.referent) : ""}</small><small>${r.dokumenty} ${plural(r.dokumenty, "dokument", "dokumenty", "dokumentów")}</small></td>
+        <td>${hit(r.odwolujacy, q)}${r.nip ? `<small>NIP ${hit(r.nip, q)}</small>` : ""}</td>
+        <td>${hit(r.zamawiajacy, q)}${r.nip_zamawiajacego ? `<small>NIP ${hit(r.nip_zamawiajacego, q)}</small>` : ""}</td>
+        <td>${hit(r.numer_postepowania, q)}${r.numer_bzp ? `<small>BZP ${hit(r.numer_bzp, q)}</small>` : ""}${r.numer_ted ? `<small>TED ${hit(r.numer_ted, q)}</small>` : ""}</td>
+        <td>${r.termin ? `${fmtDate(r.termin)}<br>${dueBadge(r.termin)}` : '<span class="st-muted">—</span>'}${r.czynnosc_dzien ? `<small>czynność ${fmtDate(r.czynnosc_dzien)}</small>` : ""}</td>
+        <td>${r.braki.length ? `<span class="st-bad">${r.braki.length} ${plural(r.braki.length, "brak", "braki", "braków")}</span><small>${esc(r.braki.join("; "))}</small>` : '<span class="st-ok">bez braków</span>'}${r.pominiete ? `<small>${r.pominiete} ${plural(r.pominiete, "pominięty", "pominięte", "pominiętych")}</small>` : ""}</td>
+        <td>${r.powiazane.length ? r.powiazane.slice(0, 3).map(x => `<button type="button" class="rel" data-rs="${esc(x.sesja)}" data-rc="${esc(x.sprawa)}" title="To samo: ${esc(x.przez.map(k => ({ numer_postepowania: "nr postępowania", numer_bzp: "ogłoszenie BZP", numer_ted: "ogłoszenie TED" })[k]).join(", "))}">↔ ${esc(x.odwolujacy || x.sprawa)}</button>`).join("") + (r.powiazane.length > 3 ? `<small>i ${r.powiazane.length - 3} więcej</small>` : "") : '<span class="st-muted">—</span>'}</td>
+      </tr>`).join("")}
+      </tbody></table></div>` : `<div class="empty" style="padding:32px"><h3>${regState.rows.length ? "Brak spraw pasujących do wyszukiwania" : "Rejestr jest pusty"}</h3>${regState.rows.length ? "" : "Wczytane sprawy pojawią się tu automatycznie, bo każda sesja zapisuje się sama."}</div>`}
+    </section></div>`;
+  const qi = $("#regQ");
+  qi.oninput = () => { regState.q = qi.value; const pos = qi.selectionStart; renderRegistry(); const n = $("#regQ"); n.focus(); n.setSelectionRange(pos, pos); };
+  $("#regBraki").onchange = (e) => { regState.braki = e.target.checked; renderRegistry(); };
+  $("#regPow").onchange = (e) => { regState.pow = e.target.checked; renderRegistry(); };
+  $("#regRefresh").onclick = () => { regState.rows = null; renderRegistry(); };
+  $("#regDl").onclick = () => {
+    const head = ["Sprawa", "Sesja", "Odwołujący", "NIP odwołującego", "Zamawiający", "NIP zamawiającego", "Nr postępowania", "BZP", "TED", "Data czynności", "Termin", "Braki", "Pominięte", "Powiązane", "Referent"];
+    const body = rows.map(r => [r.sprawa, r.sesja_nazwa, r.odwolujacy, r.nip, r.zamawiajacy, r.nip_zamawiajacego, r.numer_postepowania, r.numer_bzp, r.numer_ted, r.czynnosc_dzien, r.termin, r.braki.join("; "), r.pominiete, r.powiazane.map(x => x.sprawa).join("; "), r.referent]);
+    save(new Blob(["﻿" + csv([head, ...body])], { type: "text/csv;charset=utf-8" }), "rejestr_spraw.csv"); say("Pobrano rejestr spraw.");
+  };
+  $$("tr[data-r]").forEach(tr => { const r = rows[+tr.dataset.r], open = () => openCase(r.sesja, r.sprawa); tr.onclick = (e) => { if (!e.target.closest(".rel")) open(); }; tr.onkeydown = (e) => { if (e.key === "Enter") open(); }; });
+  $$(".rel[data-rs]").forEach(b => b.onclick = (e) => { e.stopPropagation(); openCase(b.dataset.rs, b.dataset.rc); });
+}
+
+/* ---------- kalkulator terminów (rodzaje terminów i święta z config/kontrola.yaml) ---------- */
+const termState = { start: "", rule: 0, days: null };
+function calcDeadline(start, days) {
+  const end = new Date(start); end.setDate(end.getDate() + days);
+  const skipped = [];
+  while ((end.getDay() + 6) % 7 > 4 || holidays(end.getFullYear()).has(isoOf(end))) { skipped.push(isoOf(end)); end.setDate(end.getDate() + 1); }
+  return { end, skipped };
+}
+function miniCal(y, mo, start, end, skipped) {
+  const first = new Date(y, mo, 1), lead = (first.getDay() + 6) % 7, n = new Date(y, mo + 1, 0).getDate(), hol = holidays(y);
+  let h = `<div class="mcal-t">${MIES[mo]} ${y}</div><div class="mcal">${DNI_K.map(d => `<span class="h">${d}</span>`).join("")}`;
+  for (let i = 0; i < lead; i++) h += `<span class="d out"></span>`;
+  for (let d = 1; d <= n; d++) {
+    const dt = new Date(y, mo, d), iso = isoOf(dt), we = (dt.getDay() + 6) % 7 > 4;
+    const cls = ["d", we && "we", hol.has(iso) && "hol", dt > start && dt < end && "in", sameDay(dt, start) && "start", sameDay(dt, end) && "end", skipped.includes(iso) && "skip"].filter(Boolean).join(" ");
+    h += `<span class="${cls}" title="${d} ${MIES_D[mo]}${hol.has(iso) ? ", święto" : we ? ", dzień wolny" : ""}">${d}</span>`;
+  }
+  return h + "</div>";
+}
+function renderTerms() {
+  const terms = S.rules?.terminy || [];
+  if (!termState.start) termState.start = plOf(new Date());
+  const rule = terms[termState.rule], variants = rule ? (rule.warianty || [rule.dni]) : [];
+  if (termState.days == null) termState.days = rule ? +rule.dni : 10;
+  const start = parseAnyDate(termState.start), days = Math.max(0, +termState.days || 0);
+  const res = start ? calcDeadline(start, days) : null;
+  const upcoming = (regState.rows || []).filter(r => r.termin && daysTo(r.termin) >= 0).sort((a, b) => a.termin.localeCompare(b.termin)).slice(0, 8);
+  $("#main").innerHTML = `<div class="page">
+    <div class="headrow"><div><h1>Kalkulator terminów</h1><p class="lead">Rodzaje terminów, liczby dni i święta są w <code>config/kontrola.yaml</code>. Ostatni dzień przypadający w sobotę, niedzielę albo święto przesuwa się na najbliższy dzień roboczy. Wynik to podpowiedź dla referenta.</p></div></div>
+    <div class="cols">
+      <div class="wide" style="display:flex;flex-direction:column;gap:16px">
+        <section class="card card-b"><div class="tc-grid">
+          <div class="letter-side" style="gap:10px">
+            ${terms.length ? `<label for="tcRule">Rodzaj terminu</label><select id="tcRule">${terms.map((t, i) => `<option value="${i}" ${i === termState.rule ? "selected" : ""}>${esc(t.opis || t.id)}</option>`).join("")}<option value="-1" ${termState.rule === -1 ? "selected" : ""}>Inny termin</option></select>` : ""}
+            <label for="tcStart">Data zdarzenia (np. czynności, doręczenia)</label><input id="tcStart" value="${esc(termState.start)}">
+            <label for="tcDays">Liczba dni</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">${variants.map(v => `<button type="button" class="btn sm ${+v === days ? "primary" : ""}" data-days="${v}">${v} dni</button>`).join("")}<input id="tcDays" type="number" min="0" max="365" value="${days}" style="width:110px" aria-label="Własna liczba dni"></div>
+          </div>
+          <div class="tc-res">${res ? `<div class="st-muted" style="font-size:13px">${esc(rule?.opis || "Ostatni dzień terminu")}</div>
+            <div class="big">${plOf(res.end)}</div><div>${DNI[(res.end.getDay() + 6) % 7]} · ${dueBadge(isoOf(res.end))}</div>
+            <p style="margin:10px 0 0;font-size:14px;color:var(--muted)">${days} ${plural(days, "dzień", "dni", "dni")} od ${plOf(start)}.${res.skipped.length ? ` Koniec terminu wypadał ${res.skipped.length > 1 ? "w dni wolne" : "w dzień wolny"} (${res.skipped.map(x => fmtDate(x)).join(", ")}), więc przesunięto go na najbliższy dzień roboczy.` : ""}</p>` : '<p class="st-muted">Podaj datę zdarzenia.</p>'}</div>
+        </div></section>
+        ${res ? `<section class="card card-b"><h2 style="margin-bottom:10px">Kalendarz terminu</h2><div class="tc-grid">${(() => { const out = []; let y = start.getFullYear(), mo = start.getMonth(); for (let k = 0; k < 3; k++) { out.push(`<div>${miniCal(y, mo, start, res.end, res.skipped)}</div>`); if (y === res.end.getFullYear() && mo === res.end.getMonth()) break; mo++; if (mo > 11) { mo = 0; y++; } } return out.join(""); })()}</div>
+          <p class="st-muted" style="font-size:12.5px;margin:10px 0 0">Ramka: dzień zdarzenia · tło: bieg terminu · wypełnienie: ostatni dzień · żółte: dzień wolny, z którego przesunięto termin · czerwone cyfry: weekendy i święta.</p></section>` : ""}
+      </div>
+      <div class="narrow">
+        <section class="card card-b"><h2 style="margin-bottom:10px">Najbliższe terminy w sprawach</h2>
+          ${regState.rows == null ? '<span class="spinner"></span>' : upcoming.length ? `<ul class="checks">${upcoming.map(r => `<li><span class="ico st-muted" aria-hidden="true">•</span><span><a href="#" data-rs="${esc(r.sesja)}" data-rc="${esc(r.sprawa)}">${esc(r.odwolujacy || r.sprawa)}</a><small>${fmtDate(r.termin)} · ${dueBadge(r.termin)}${r.numer_postepowania ? " · " + esc(r.numer_postepowania) : ""}</small></span></li>`).join("")}</ul>` : '<p class="st-muted" style="margin:0;font-size:14px">Brak nadchodzących terminów w zapisanych sprawach.</p>'}
+        </section>
+      </div>
+    </div></div>`;
+  if (regState.rows == null && !regState.loading) loadRegistry().then(() => S.view === "terminy" && renderTerms());
+  $("#tcRule") && ($("#tcRule").onchange = (e) => { termState.rule = +e.target.value; const r = terms[termState.rule]; if (r) termState.days = +r.dni; renderTerms(); });
+  attachDate($("#tcStart"), "pl");
+  $("#tcStart").onchange = (e) => { if (termState.start === e.target.value) return; termState.start = e.target.value; setTimeout(renderTerms); };
+  $("#tcDays").onchange = (e) => { if (termState.days === +e.target.value) return; termState.days = +e.target.value; setTimeout(renderTerms); };
+  $$("[data-days]").forEach(b => b.onclick = () => { termState.days = +b.dataset.days; renderTerms(); });
+  $$("a[data-rs]").forEach(a => a.onclick = (e) => { e.preventDefault(); openCase(a.dataset.rs, a.dataset.rc); });
 }
 
 /* ---------- kontrola formalna ---------- */
