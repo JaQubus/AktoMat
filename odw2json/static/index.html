@@ -7,30 +7,33 @@
 <meta name="description" content="Wczytywanie, automatyczna klasyfikacja i ekstrakcja danych z odwołań do KIO, pełnomocnictw i potwierdzeń przelewu.">
 <style>
   :root {
-    --bg: #eef1f5; --panel: #ffffff; --panel-2: #f7f9fb; --ink: #14213a; --muted: #4f5b70; --line: #d5dbe4; --line-strong: #b6c0cf;
-    --brand: #12346b; --brand-ink: #ffffff; --brand-2: #0e2a57;
-    --accent: #1a56b8; --accent-ink: #ffffff; --accent-soft: #e5eefc; --focus: #f2a900;
-    --ok: #12703f; --ok-soft: #e3f3ea; --warn: #8a5a00; --warn-soft: #fdf2d8; --bad: #a12a1c; --bad-soft: #fbe6e2;
-    --llm: #5a34a8; --llm-soft: #efe8fb; --rules: #12703f; --rules-soft: #e3f3ea; --derived: #7a5a00; --derived-soft: #faf1d6; --manual: #0b5f86; --manual-soft: #e0f1f8;
-    --mark: rgba(242, 169, 0, .38); --mark-line: #c98a00; --viewer: #5d6778;
-    --radius: 8px; --shadow: 0 1px 2px rgba(16, 33, 58, .08), 0 2px 8px rgba(16, 33, 58, .05);
+    --bg: #eff3f2; --panel: #ffffff; --panel-2: #f5f8f7; --ink: #142221; --muted: #4a5b59; --line: #d3dddb; --line-strong: #afbfbc;
+    --brand: #0d4547; --brand-ink: #ffffff; --brand-2: #0a3637;
+    --accent: #0c6b67; --accent-ink: #ffffff; --accent-soft: #dff0ed; --focus: #f0a500;
+    --ok: #1f7a3a; --ok-soft: #e2f2e6; --warn: #8a5300; --warn-soft: #fcf0d6; --bad: #a3261b; --bad-soft: #fbe5e1;
+    --llm: #4b3aa8; --llm-soft: #ebe8fa; --rules: #1f7a3a; --rules-soft: #e2f2e6; --derived: #8a5300; --derived-soft: #faf0d9; --manual: #0b5f86; --manual-soft: #e0f0f7;
+    --k-odw: #0c6b67; --k-odw-soft: #dff0ed; --k-pel: #4b3aa8; --k-pel-soft: #ebe8fa; --k-prz: #9a4a10; --k-prz-soft: #fbeadb;
+    --mark: rgba(255, 190, 0, .40); --mark-line: #b98200; --viewer: #4f5f5e;
+    --radius: 8px; --shadow: 0 1px 2px rgba(13, 40, 40, .08), 0 2px 8px rgba(13, 40, 40, .05);
     --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #0f141c; --panel: #171e29; --panel-2: #1c2431; --ink: #e8edf5; --muted: #a6b1c3; --line: #2c3646; --line-strong: #3e4a5d;
-      --brand: #0d2244; --brand-2: #0a1a35; --accent: #7aa7ff; --accent-ink: #0b1a33; --accent-soft: #1c2b46;
-      --ok: #6fd39d; --ok-soft: #173326; --warn: #f0c35a; --warn-soft: #332a12; --bad: #ff9b8a; --bad-soft: #3a1d19;
-      --llm: #c0a4ff; --llm-soft: #2a2242; --rules: #6fd39d; --rules-soft: #173326; --derived: #f0c35a; --derived-soft: #332a12; --manual: #7fd0f2; --manual-soft: #12303d;
-      --viewer: #262e3b;
+      --bg: #0d1514; --panel: #142020; --panel-2: #192827; --ink: #e4eeec; --muted: #a2b6b2; --line: #283a38; --line-strong: #3a504d;
+      --brand: #092d2e; --brand-2: #072324; --accent: #4cc2b5; --accent-ink: #052120; --accent-soft: #123432;
+      --ok: #74d396; --ok-soft: #153223; --warn: #f2c14e; --warn-soft: #33290f; --bad: #ff9a88; --bad-soft: #3b1c18;
+      --llm: #aea6ff; --llm-soft: #252046; --rules: #74d396; --rules-soft: #153223; --derived: #f2c14e; --derived-soft: #33290f; --manual: #7fd0f2; --manual-soft: #11303c;
+      --k-odw: #4cc2b5; --k-odw-soft: #123432; --k-pel: #aea6ff; --k-pel-soft: #252046; --k-prz: #f0a668; --k-prz-soft: #3a2614;
+      --viewer: #22302f;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #0f141c; --panel: #171e29; --panel-2: #1c2431; --ink: #e8edf5; --muted: #a6b1c3; --line: #2c3646; --line-strong: #3e4a5d;
-    --brand: #0d2244; --brand-2: #0a1a35; --accent: #7aa7ff; --accent-ink: #0b1a33; --accent-soft: #1c2b46;
-    --ok: #6fd39d; --ok-soft: #173326; --warn: #f0c35a; --warn-soft: #332a12; --bad: #ff9b8a; --bad-soft: #3a1d19;
-    --llm: #c0a4ff; --llm-soft: #2a2242; --rules: #6fd39d; --rules-soft: #173326; --derived: #f0c35a; --derived-soft: #332a12; --manual: #7fd0f2; --manual-soft: #12303d;
-    --viewer: #262e3b;
+    --bg: #0d1514; --panel: #142020; --panel-2: #192827; --ink: #e4eeec; --muted: #a2b6b2; --line: #283a38; --line-strong: #3a504d;
+      --brand: #092d2e; --brand-2: #072324; --accent: #4cc2b5; --accent-ink: #052120; --accent-soft: #123432;
+      --ok: #74d396; --ok-soft: #153223; --warn: #f2c14e; --warn-soft: #33290f; --bad: #ff9a88; --bad-soft: #3b1c18;
+      --llm: #aea6ff; --llm-soft: #252046; --rules: #74d396; --rules-soft: #153223; --derived: #f2c14e; --derived-soft: #33290f; --manual: #7fd0f2; --manual-soft: #11303c;
+      --k-odw: #4cc2b5; --k-odw-soft: #123432; --k-pel: #aea6ff; --k-pel-soft: #252046; --k-prz: #f0a668; --k-prz-soft: #3a2614;
+      --viewer: #22302f;
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -56,7 +59,7 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; }
   .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.22); white-space: nowrap; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa3b2; flex: none; }
-  .dot.on { background: #5fd38f; } .dot.off { background: #f2a900; }
+  .dot.on { background: #6fe0a0; } .dot.off { background: #f0a500; }
   .iconbtn { background: none; border: 1px solid rgba(255,255,255,.3); color: var(--brand-ink); border-radius: 6px; padding: 4px 8px; cursor: pointer; }
 
   /* Układ */
@@ -104,9 +107,9 @@
   .doc .ic { grid-row: span 2; width: 30px; height: 36px; border-radius: 4px; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; letter-spacing: .3px; background: var(--panel-2); border: 1px solid var(--line-strong); color: var(--muted); }
   .doc .nm { font-size: 14px; font-weight: 600; word-break: break-word; }
   .doc .st { font-size: 12.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-  .ic.k-odwolanie { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
-  .ic.k-pelnomocnictwo { background: var(--llm-soft); color: var(--llm); border-color: var(--llm); }
-  .ic.k-przelew { background: var(--ok-soft); color: var(--ok); border-color: var(--ok); }
+  .ic.k-odwolanie { background: var(--k-odw-soft); color: var(--k-odw); border-color: var(--k-odw); }
+  .ic.k-pelnomocnictwo { background: var(--k-pel-soft); color: var(--k-pel); border-color: var(--k-pel); }
+  .ic.k-przelew { background: var(--k-prz-soft); color: var(--k-prz); border-color: var(--k-prz); }
   .ic.k-rej { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
   .ic.k-err { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
   .listfoot { border-top: 1px solid var(--line); padding: 12px 14px; display: flex; gap: 8px; }
@@ -122,7 +125,7 @@
   .page img { display: block; width: 100%; height: 100%; }
   .page .pn { position: absolute; right: -2px; top: -2px; transform: translateY(-100%); font-size: 12px; color: #fff; opacity: .8; }
   .hl { position: absolute; background: var(--mark); outline: 2px solid var(--mark-line); border-radius: 2px; pointer-events: none; animation: pulse 1.2s ease-out 1; }
-  @keyframes pulse { from { box-shadow: 0 0 0 8px rgba(242,169,0,.45); } to { box-shadow: 0 0 0 0 rgba(242,169,0,0); } }
+  @keyframes pulse { from { box-shadow: 0 0 0 8px rgba(255,190,0,.45); } to { box-shadow: 0 0 0 0 rgba(255,190,0,0); } }
   .placeholder { margin: auto; color: #e6eaf0; text-align: center; max-width: 360px; padding: 24px; }
   .placeholder h3 { margin: 10px 0 6px; font-size: 17px; }
   .placeholder p { margin: 0; opacity: .85; font-size: 14px; }
@@ -249,7 +252,7 @@
 <a class="skip" href="#main">Przejdź do treści</a>
 <header class="topbar">
   <div class="brand">
-    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="5" y="3" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 10h12M9 14h12M9 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="25" r="7" fill="#f2a900"/><path d="M22 25l2 2 4-4" stroke="#12346b" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect x="5" y="3" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 10h12M9 14h12M9 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="25" r="7" fill="#f0a500"/><path d="M22 25l2 2 4-4" stroke="#0d4547" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
     <div><b>AktoMat</b><small>Ekstrakcja danych z dokumentów postępowań odwoławczych</small></div>
   </div>
   <nav class="views" aria-label="Widoki">
