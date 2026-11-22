@@ -11,6 +11,10 @@ sudo bash repo/deploy/run.sh
 - OCR skanów lokalnie: Tesseract z językiem polskim (zainstalowany na serwerze).
 - Ślad ekstrakcji (skąd wzięła się każda wartość): `/opt/solution/trace/`.
 
+## Interfejs WWW (opcjonalnie)
+
+Pełna aplikacja z interfejsem działa w tle pod `http://<adres-ip-serwera>:8000` (start: `bash repo/deploy/web.sh`, uruchamia się też sama po restarcie). Nie korzysta z `input/` ani `output/`, więc nie wpływa na wynik komendy powyżej.
+
 ## Usługi zewnętrzne
 
 Model językowy open-weight przez API zgodne z OpenAI, klucz w `/opt/solution/.env` (`LLM_PROFILE` + `<PROFIL>_API_KEY` albo `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY`). Bez klucza aplikacja działa na samych regułach.
