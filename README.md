@@ -177,6 +177,23 @@ nano /opt/solution/.env               # opcjonalnie klucz API (LLM_PROFILE=... i
 
 Test dokładnie tak jak u oceniających: wrzuć PDF-y do `/opt/solution/input`, wyczyść `/opt/solution/output` i uruchom `sudo bash repo/deploy/run.sh` (z katalogu `/opt/solution`). Aplikacja czyta też `.env` z bieżącego katalogu albo ze ścieżki `ODW2JSON_ENV`.
 
+### Interfejs WWW na serwerze (dla oceniających)
+
+Na serwerze oceny działa też pełna aplikacja z interfejsem, żeby można było jej używać tak jak urzędnik: wgrać PDF-y sprawy, przejrzeć wyciągnięte pola z cytatami ze stron, zatwierdzić je, sprawdzić kontrolę formalną, terminy i pobrać JSON albo pismo.
+
+- Adres: `http://<adres-ip-serwera>:8000` (port 8000 jest otwarty wg VM.md). Bez logowania.
+- Model: ten sam co w ocenie, profil z `/opt/solution/.env` (u nas `ark`, Bielik 11B v3.0).
+- Uruchomienie i autostart po restarcie serwera (bez `sudo`, cron `@reboot`):
+
+```bash
+cd /opt/solution
+bash repo/deploy/web.sh          # start w tle + autostart; wypisuje adres
+bash repo/deploy/web.sh --stop   # zatrzymanie i usunięcie autostartu
+tail -f /opt/solution/web.log    # log
+```
+
+GUI nie korzysta z `/opt/solution/input` ani `output`, więc nie wpływa na ocenę komendą z `RUN.md`. Sesje z interfejsu zapisują się w `repo/sesje/`.
+
 ## Zgodność z wymaganiami UZP
 
 | wymaganie (README UZP) | jak spełnione |
