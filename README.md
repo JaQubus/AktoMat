@@ -4,9 +4,48 @@
 
 - rozpoznaje rodzaj dokumentu po treści (nazwa pliku nie ma wpływu), a dokumenty spoza klas i podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wyrok KIO, pusty wzór, ogłoszenie) dostają pusty JSON `{}`,
 - czyta PDF-y z warstwą tekstową i skany (OCR Tesseract, język polski),
-- łączy reguły deterministyczne z otwartym modelem językowym (GPT-OSS-120B przez API w UE) i odrzuca wartości, których nie ma w dokumencie,
+- łączy reguły deterministyczne z otwartym modelem językowym (Bielik 11B v3.0 przez ARK Labs, API w UE) i odrzuca wartości, których nie ma w dokumencie,
 - dla każdego pola zapisuje ślad: skąd pochodzi wartość (LLM, reguła, wyliczenie), strona i cytat,
 - nowe typy dokumentów i pola dodaje się **wyłącznie plikiem YAML**, bez zmian w kodzie.
+
+## Instrukcja uruchomienia: PDF-y do `input`, JSON-y z `output`
+
+**A. Na serwerze oceny UZP (już wdrożone).** Zaloguj się, wrzuć PDF-y i uruchom komendę z `RUN.md`:
+
+```bash
+cd /opt/solution
+cp /ścieżka/do/pdfów/*.pdf input/          # można też całe katalogi spraw (podkatalogi)
+sudo bash repo/deploy/run.sh               # przetwarza wszystko z input/, kończy się sam
+ls output/                                 # JSON o tej samej nazwie co każdy PDF
+cat output/<nazwa>.json
+```
+
+Dokument spoza obsługiwanych klas dostaje `{}`. Ślad (skąd każda wartość, strona, cytat) jest w `/opt/solution/trace/`. Interfejs WWW działa w tle pod `http://<adres-ip-serwera>:8000`.
+
+**B. Lokalnie, Windows.** Wymagany Python 3.13 i (dla skanów) Tesseract z językiem polskim.
+
+```bat
+git clone https://github.com/JaQubus/AktoMat.git
+cd AktoMat
+copy .env.example .env
+notepad .env                 &:: dopisz: LLM_PROFILE=ark  oraz  ARK_API_KEY=<klucz>
+:: wrzuć PDF-y do folderu input\ (można podfoldery spraw)
+start.bat                    &:: input\ -> output\ (JSON-y), ślad w trace\
+start.bat web                &:: interfejs: http://127.0.0.1:8000
+```
+
+**C. Lokalnie, Linux / macOS.**
+
+```bash
+git clone https://github.com/JaQubus/AktoMat.git && cd AktoMat
+cp .env.example .env && nano .env     # LLM_PROFILE=ark, ARK_API_KEY=<klucz>
+sudo apt install tesseract-ocr tesseract-ocr-pol   # macOS: brew install tesseract tesseract-lang
+cp /ścieżka/do/pdfów/*.pdf input/
+./start.sh                            # input/ -> output/
+./start.sh web                        # http://127.0.0.1:8000
+```
+
+Bez klucza API (albo z `--no-llm`: `start.bat run --no-llm`) aplikacja działa na samych regułach. Inne katalogi: `python -m odw2json run -i <wejście> -o <wyjście>`.
 
 ## Szybki start
 
@@ -14,7 +53,7 @@ Wymagania: **Python 3.13+**. Do skanów zalecany [Tesseract OCR](https://github.
 
 ```bat
 :: Windows
-copy .env.example .env      &:: wpisz LLM_API_KEY
+copy .env.example .env      &:: wpisz LLM_PROFILE=ark i ARK_API_KEY
 start.bat                   &:: input\ -> output\
 start.bat web               &:: GUI: http://127.0.0.1:8000
 start.bat docs              &:: dokumentacja: http://127.0.0.1:8001
