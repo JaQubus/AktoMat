@@ -3,7 +3,8 @@
   python -m odw2json                      # input/ -> output/ (ślad w trace/)
   python -m odw2json run -i input -o output [--no-llm]
   python -m odw2json eval --gt <dane> [--no-llm]    # F1 na zbiorze treningowym UZP
-  python -m odw2json web                  # GUI na http://127.0.0.1:8000
+  python -m odw2json web                  # GUI na http://127.0.0.1:8000 (dokumentacja: /dokumentacja)
+  python -m odw2json docs                 # dokumentacja na http://127.0.0.1:8001
   python -m odw2json classes              # lista skonfigurowanych klas dokumentów
 """
 from __future__ import annotations
@@ -37,6 +38,10 @@ def main(argv=None):
     w = sub.add_parser("web", help="GUI w przeglądarce")
     w.add_argument("--host", default="127.0.0.1")
     w.add_argument("--port", type=int, default=8000)
+    d = sub.add_parser("docs", help="dokumentacja w przeglądarce")
+    d.add_argument("--host", default="127.0.0.1")
+    d.add_argument("--port", type=int, default=8001)
+    d.add_argument("--no-browser", action="store_true", help="nie otwieraj przeglądarki")
     sub.add_parser("classes", help="lista klas dokumentów")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
@@ -65,6 +70,17 @@ def main(argv=None):
         import uvicorn
 
         uvicorn.run("odw2json.web:app", host=args.host, port=args.port)
+    elif cmd == "docs":
+        import threading
+        import webbrowser
+
+        import uvicorn
+
+        url = f"http://{'127.0.0.1' if args.host in ('0.0.0.0', '::') else args.host}:{args.port}/dokumentacja"
+        print(f"Dokumentacja AktoMat: {url}  (Ctrl+C kończy)")
+        if not args.no_browser:
+            threading.Timer(1.2, webbrowser.open, (url,)).start()
+        uvicorn.run("odw2json.docs:app", host=args.host, port=args.port, log_level="warning")
     elif cmd == "classes":
         from .config import load_classes
 

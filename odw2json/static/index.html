@@ -79,6 +79,7 @@
   .nav.sub .cn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .navsep { height: 1px; background: var(--line); margin: 8px 4px; }
   .navlabel { font-size: 13px; color: var(--muted); padding: 12px 12px 4px; font-weight: 600; }
+  a.nav { text-decoration: none; }
   .nav.cfg { font-size: 13.5px; color: var(--muted); padding-top: 7px; padding-bottom: 7px; }
   .nav.cfg[aria-current="page"] { color: var(--accent); }
   .navfoot { padding: 12px; border-top: 1px solid var(--line); display: grid; gap: 8px; }
@@ -606,7 +607,8 @@ function drawNav() {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Dziennik zmian${S.log.length ? `<span class="n st-muted">${S.log.length}</span>` : ""}</button>
     <div class="navlabel">Konfiguracja</div>
     <button class="nav cfg" type="button" data-go="klasy" ${cur("klasy")}>Typy dokumentów i reguły</button>
-    <button class="nav cfg" type="button" data-go="raport" ${cur("raport")}>Skuteczność odczytu</button>`;
+    <button class="nav cfg" type="button" data-go="raport" ${cur("raport")}>Skuteczność odczytu</button>
+    <a class="nav cfg" href="/dokumentacja" target="_blank" rel="noopener">Dokumentacja</a>`;
   $("#navlist").innerHTML = h;
   $$("#navlist [data-go]").forEach(b => b.onclick = () => go(b.dataset.go));
   $$("#navlist [data-case]").forEach(b => b.onclick = () => go("sprawa", { caseName: b.dataset.case }));
