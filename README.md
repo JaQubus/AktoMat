@@ -17,12 +17,14 @@ Wymagania: **Python 3.13+**. Do skanów zalecany [Tesseract OCR](https://github.
 copy .env.example .env      &:: wpisz LLM_API_KEY
 start.bat                   &:: input\ -> output\
 start.bat web               &:: GUI: http://127.0.0.1:8000
+start.bat docs              &:: dokumentacja: http://127.0.0.1:8001
 ```
 
 ```bash
 # Linux / macOS
 cp .env.example .env && ./start.sh          # input/ -> output/
 ./start.sh web
+./start.sh docs                             # dokumentacja
 ```
 
 `start.bat` / `start.sh` same tworzą środowisko `.venv` i instalują `requirements.txt`. Ręcznie:
@@ -34,7 +36,10 @@ python -m odw2json run --no-llm                  # tylko reguły (bez sieci)
 python -m odw2json web                           # GUI
 python -m odw2json eval --gt ../hacknation-2026/dane   # F1 na zbiorze treningowym
 python -m odw2json classes                       # lista skonfigurowanych klas
+python -m odw2json docs                          # dokumentacja (http://127.0.0.1:8001)
 ```
+
+**Dokumentacja** (`docs/index.html`) to strona w stylu aplikacji: instrukcja dla referenta ze zrzutami ekranu i część techniczna (architektura, YAML, model, F1, wdrożenie). Otwiera ją `start.bat docs`, a w GUI link „Dokumentacja” w menu (`/dokumentacja`). Sekcja „Konfiguracja na żywo” jest czytana z `config/*.yaml` przy każdym wejściu, więc nowa klasa albo reguła kontroli pojawia się w niej bez zmian w kodzie.
 
 ### Wejście i wyjście
 
@@ -193,6 +198,7 @@ odw2json/            kod (pipeline, OCR, klasyfikacja, reguły, LLM, ewaluacja, 
 config/settings.yaml ustawienia ogólne (model, OCR, równoległość)
 config/classes/      definicje klas dokumentów (YAML)
 input/ output/       foldery wejścia i wyjścia wymagane przez UZP
+docs/                dokumentacja jako strona (python -m odw2json docs)
 tests/               testy (pytest)
 ```
 

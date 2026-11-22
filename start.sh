@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AktoMat - uruchomienie:  ./start.sh [run|web|eval --gt KATALOG|classes] [opcje]
+# AktoMat - uruchomienie:  ./start.sh [run|web|docs|eval --gt KATALOG|classes] [opcje]
 set -e
 cd "$(dirname "$0")"
 [ -d .venv ] || python3 -m venv .venv

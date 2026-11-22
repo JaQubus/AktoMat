@@ -28,6 +28,7 @@ from .anonymize import Anonymizer, load_export_config
 from .checks import load_rules, run_checks
 from .locate import locate, page_words
 from .pipeline import Engine
+from .docs import router as docs_router
 
 STATIC = Path(__file__).parent / "static"
 # Dane pracy referenta (sesje i wczytane PDF-y) poza repozytorium kodu w git: katalog sesje/ jest w .gitignore.
@@ -40,6 +41,7 @@ REPORT = ROOT / "eval_report" / "raport.md"
 MAX_ZIP_FILES = 500
 
 app = FastAPI(title="AktoMat", version="1.2")
+app.include_router(docs_router)  # dokumentacja pod /dokumentacja
 _engine: Engine | None = None
 _engine_rules: Engine | None = None
 _sem: asyncio.Semaphore | None = None

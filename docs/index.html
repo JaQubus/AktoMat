@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AktoMat: dokumentacja</title>
+<meta name="description" content="Dokumentacja AktoMat: instrukcja pracy dla referenta oraz opis techniczny (architektura, konfiguracja YAML, model językowy, wyniki F1, wdrożenie).">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 34'%3E%3Crect x='5' y='3' width='20' height='26' rx='2' fill='%23fff' stroke='%230d4547' stroke-width='2'/%3E%3Cpath d='M9 10h12M9 14h12M9 18h7' stroke='%230d4547' stroke-width='2' stroke-linecap='round'/%3E%3Ccircle cx='25' cy='25' r='7' fill='%23f0a500'/%3E%3Cpath d='M22 25l2 2 4-4' stroke='%230d4547' stroke-width='2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #eff3f2; --panel: #ffffff; --panel-2: #f5f8f7; --ink: #142221; --muted: #4a5b59; --line: #d3dddb; --line-strong: #afbfbc;
+    --brand: #0d4547; --brand-ink: #ffffff; --accent: #0c6b67; --accent-ink: #ffffff; --accent-soft: #dff0ed; --focus: #f0a500;
+    --ok: #1f7a3a; --ok-soft: #e2f2e6; --warn: #8a5300; --warn-soft: #fcf0d6; --bad: #a3261b; --bad-soft: #fbe5e1;
+    --llm: #4b3aa8; --llm-soft: #ebe8fa; --derived: #8a5300; --derived-soft: #faf0d9;
+    --k-odw: #0c6b67; --k-odw-soft: #dff0ed; --k-pel: #4b3aa8; --k-pel-soft: #ebe8fa; --k-prz: #9a4a10; --k-prz-soft: #fbeadb;
+    --code-bg: #f2f6f5; --radius: 8px; --shadow: 0 1px 2px rgba(13, 40, 40, .08), 0 2px 8px rgba(13, 40, 40, .05);
+    --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d1514; --panel: #142020; --panel-2: #192827; --ink: #e4eeec; --muted: #a2b6b2; --line: #283a38; --line-strong: #3a504d;
+      --brand: #092d2e; --accent: #4cc2b5; --accent-ink: #052120; --accent-soft: #123432;
+      --ok: #74d396; --ok-soft: #153223; --warn: #f2c14e; --warn-soft: #33290f; --bad: #ff9a88; --bad-soft: #3b1c18;
+      --llm: #aea6ff; --llm-soft: #252046; --derived: #f2c14e; --derived-soft: #33290f;
+      --k-odw: #4cc2b5; --k-odw-soft: #123432; --k-pel: #aea6ff; --k-pel-soft: #252046; --k-prz: #f0a668; --k-prz-soft: #3a2614;
+      --code-bg: #101b1a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d1514; --panel: #142020; --panel-2: #192827; --ink: #e4eeec; --muted: #a2b6b2; --line: #283a38; --line-strong: #3a504d;
+    --brand: #092d2e; --accent: #4cc2b5; --accent-ink: #052120; --accent-soft: #123432;
+    --ok: #74d396; --ok-soft: #153223; --warn: #f2c14e; --warn-soft: #33290f; --bad: #ff9a88; --bad-soft: #3b1c18;
+    --llm: #aea6ff; --llm-soft: #252046; --derived: #f2c14e; --derived-soft: #33290f;
+    --k-odw: #4cc2b5; --k-odw-soft: #123432; --k-pel: #aea6ff; --k-pel-soft: #252046; --k-prz: #f0a668; --k-prz-soft: #3a2614;
+    --code-bg: #101b1a;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 76px; scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.62 "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+  .skip { position: absolute; left: 8px; top: -60px; background: var(--panel); color: var(--ink); padding: 8px 12px; border-radius: 6px; z-index: 30; }
+  .skip:focus { top: 8px; }
+
+  /* pasek górny jak w aplikacji */
+  .topbar { position: sticky; top: 0; z-index: 20; background: var(--brand); color: var(--brand-ink); display: flex; align-items: center; gap: 14px; padding: 0 20px; min-height: 60px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+  .brand b { font-size: 18px; letter-spacing: .2px; }
+  .brand span { opacity: .8; font-size: 15px; }
+  .topbar .spacer { flex: 1; }
+  .tbtn { display: inline-flex; align-items: center; gap: 6px; color: var(--brand-ink); text-decoration: none; font-size: 14px; border: 1px solid rgba(255,255,255,.3); background: none; border-radius: 6px; padding: 6px 10px; cursor: pointer; font-family: inherit; }
+  .tbtn:hover { background: rgba(255,255,255,.12); }
+  .menu { display: none; }
+
+  .shell { display: grid; grid-template-columns: 270px minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+  nav.toc { position: sticky; top: 60px; align-self: start; height: calc(100vh - 60px); overflow: auto; padding: 22px 12px 40px 20px; border-right: 1px solid var(--line); }
+  .toc h2 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 10px 6px; }
+  .toc h2:first-child { margin-top: 0; }
+  .toc a { display: block; padding: 6px 10px; border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 14.5px; line-height: 1.35; }
+  .toc a:hover { background: var(--panel-2); }
+  .toc a[aria-current="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+  main { padding: 34px 44px 80px; min-width: 0; }
+  .hero { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 30px 32px; box-shadow: var(--shadow); margin-bottom: 26px; }
+  .hero h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.2; }
+  .hero .lead { font-size: 18px; color: var(--muted); margin: 0 0 18px; max-width: 70ch; }
+  .paths { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .path { display: block; border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; text-decoration: none; color: var(--ink); background: var(--panel-2); }
+  .path:hover { border-color: var(--accent); }
+  .path b { display: block; color: var(--accent); font-size: 16.5px; margin-bottom: 2px; }
+  .path span { color: var(--muted); font-size: 14.5px; }
+
+  .part { margin: 46px 0 6px; padding-top: 6px; }
+  .part .eyebrow { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 700; }
+  .part h2 { font-size: 27px; margin: 2px 0 4px; }
+  .part p { color: var(--muted); margin: 0; max-width: 72ch; }
+  section.doc { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 24px 30px 26px; margin: 18px 0; box-shadow: var(--shadow); }
+  section.doc > h3 { font-size: 21px; margin: 0 0 10px; line-height: 1.3; }
+  section.doc h4 { font-size: 16.5px; margin: 22px 0 6px; }
+  section.doc p, section.doc li { max-width: 78ch; }
+  section.doc ul, section.doc ol { padding-left: 22px; }
+  section.doc li { margin: 3px 0; }
+  code { font-family: var(--mono); font-size: .9em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.5; background: var(--code-bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; overflow: auto; max-width: 100%; }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+  .y-k { color: var(--accent); } .y-c { color: var(--muted); font-style: italic; } .y-s { color: var(--k-prz); }
+  kbd { font-family: var(--mono); font-size: .85em; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--panel-2); }
+
+  figure { margin: 16px 0 6px; }
+  figure button { display: block; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; cursor: zoom-in; background: var(--panel-2); width: 100%; }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+  .note.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .note b:first-child { display: block; }
+
+  .steps { counter-reset: s; list-style: none; padding: 0 !important; }
+  .steps > li { counter-increment: s; position: relative; padding-left: 40px; margin: 10px 0; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+
+  .tag { display: inline-block; font-size: 13px; font-weight: 600; padding: 1px 8px; border-radius: 4px; white-space: nowrap; }
+  .t-odw { background: var(--k-odw-soft); color: var(--k-odw); } .t-pel { background: var(--k-pel-soft); color: var(--k-pel); } .t-prz { background: var(--k-prz-soft); color: var(--k-prz); }
+  .t-ok { background: var(--ok-soft); color: var(--ok); } .t-llm { background: var(--llm-soft); color: var(--llm); } .t-der { background: var(--derived-soft); color: var(--derived); } .t-bad { background: var(--bad-soft); color: var(--bad); } .t-warn { background: var(--warn-soft); color: var(--warn); }
+  .st-bad { color: var(--bad); font-weight: 600; }
+
+  .tablewrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--panel-2); font-weight: 600; font-size: 13.5px; color: var(--muted); }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td code { white-space: nowrap; }
+  tr.best td { background: var(--accent-soft); font-weight: 600; }
+
+  /* schemat przetwarzania */
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 16px 0; }
+  .flow .st { flex: 1 1 150px; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; background: var(--panel-2); position: relative; }
+  .flow .st b { display: block; font-size: 14.5px; }
+  .flow .st span { font-size: 13px; color: var(--muted); line-height: 1.4; display: block; margin-top: 2px; }
+  .flow .st.hl { border-color: var(--accent); background: var(--accent-soft); }
+  .flow .arr { align-self: center; color: var(--muted); font-size: 18px; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 14px 0; }
+  .card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; background: var(--panel-2); }
+  .card b { display: block; margin-bottom: 4px; }
+  .card p { margin: 0; font-size: 14.5px; color: var(--muted); }
+  .stat { font-size: 30px; font-weight: 700; line-height: 1.1; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  details.cls { border: 1px solid var(--line); border-radius: var(--radius); margin: 10px 0; background: var(--panel); }
+  details.cls > summary { cursor: pointer; padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; list-style: none; }
+  details.cls > summary::-webkit-details-marker { display: none; }
+  details.cls > summary::before { content: "▸"; color: var(--muted); }
+  details.cls[open] > summary::before { content: "▾"; }
+  details.cls > summary .meta { color: var(--muted); font-size: 14px; }
+  details.cls .tablewrap { margin: 0 12px 12px; }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ok); background: var(--ok-soft); border-radius: 999px; padding: 1px 10px; font-weight: 600; }
+  .live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  dialog.zoom { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 94vh; }
+  dialog.zoom::backdrop { background: rgba(5, 15, 15, .78); }
+  dialog.zoom img { display: block; max-width: 96vw; max-height: 90vh; border-radius: 8px; }
+  dialog.zoom form { text-align: right; margin-bottom: 6px; }
+  dialog.zoom button { background: var(--panel); color: var(--ink); border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; font: inherit; }
+  footer { color: var(--muted); font-size: 14px; margin-top: 40px; }
+
+  @media (max-width: 980px) {
+    .shell { grid-template-columns: 1fr; }
+    nav.toc { position: fixed; z-index: 15; left: 0; top: 60px; width: 290px; max-width: 86vw; background: var(--panel); border-right: 1px solid var(--line); transform: translateX(-105%); transition: transform .2s; box-shadow: var(--shadow); }
+    body.toc-open nav.toc { transform: none; }
+    .menu { display: inline-flex; }
+    main { padding: 22px 16px 60px; }
+    section.doc { padding: 18px 16px; }
+    .hero { padding: 22px 18px; }
+    .two { grid-template-columns: 1fr; }
+    .brand span { display: none; }
+  }
+  @media (max-width: 520px) { #appLink { display: none; } .topbar { padding: 0 12px; gap: 10px; } }
+  @media print {
+    .topbar, nav.toc { display: none; }
+    .shell { display: block; } main { padding: 0; }
+    section.doc, .hero { box-shadow: none; break-inside: avoid-page; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#tresc">Przejdź do treści</a>
+<header class="topbar">
+  <button class="tbtn menu" type="button" id="menu" aria-controls="toc" aria-expanded="false">Spis treści</button>
+  <a class="brand" href="#start">
+    <svg width="30" height="30" viewBox="0 0 34 34" aria-hidden="true"><rect x="5" y="3" width="20" height="26" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 10h12M9 14h12M9 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="25" cy="25" r="7" fill="#f0a500"/><path d="M22 25l2 2 4-4" stroke="#0d4547" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <b>AktoMat</b><span>dokumentacja</span>
+  </a>
+  <span class="spacer"></span>
+  <a class="tbtn" id="appLink" href="/">Otwórz aplikację</a>
+  <button class="tbtn" id="theme" type="button" aria-label="Przełącz motyw jasny lub ciemny" title="Motyw jasny/ciemny"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="display:block"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18z" fill="currentColor"/></svg></button>
+</header>
+
+<div class="shell">
+<nav class="toc" id="toc" aria-label="Spis treści">
+  <h2>Dla referenta</h2>
+  <a href="#co-robi">Co robi AktoMat</a>
+  <a href="#uruchomienie">Uruchomienie</a>
+  <a href="#wczytanie">Wczytanie sprawy</a>
+  <a href="#pulpit">Pulpit sprawy</a>
+  <a href="#weryfikacja">Weryfikacja danych</a>
+  <a href="#kontrola">Kontrola formalna i eksport</a>
+  <a href="#pismo">Pismo o uzupełnienie braków</a>
+  <a href="#narzedzia">Rejestr, terminy, dziennik</a>
+  <a href="#asystent">Asystent AI</a>
+  <a href="#pytania">Częste pytania</a>
+  <h2>Dla jury i administratora</h2>
+  <a href="#architektura">Architektura</a>
+  <a href="#nie-zgaduj">Zasada „nie zgaduj”</a>
+  <a href="#yaml">Rozszerzanie przez YAML</a>
+  <a href="#konfiguracja">Konfiguracja na żywo</a>
+  <a href="#llm">Model językowy</a>
+  <a href="#wyniki">Wyniki F1</a>
+  <a href="#wdrozenie">Uruchomienie i wdrożenie</a>
+  <a href="#zgodnosc">Zgodność z wymaganiami UZP</a>
+  <a href="#repo">Struktura i testy</a>
+</nav>
+
+<main id="tresc">
+<div class="hero" id="start">
+  <h1>AktoMat: od dokumentów do danych</h1>
+  <p class="lead">AktoMat rozpoznaje dokumenty sprawy odwoławczej przed KIO (odwołanie, pełnomocnictwo, potwierdzenie przelewu), odczytuje z nich dane do formatu JSON Urzędu Zamówień Publicznych i pomaga referentowi sprawdzić kompletność teczki.</p>
+  <div class="paths">
+    <a class="path" href="#co-robi"><b>Instrukcja dla referenta</b><span>Jak wczytać sprawę, sprawdzić dane, przeprowadzić kontrolę formalną i przygotować pismo.</span></a>
+    <a class="path" href="#architektura"><b>Opis techniczny</b><span>Architektura, rozszerzanie przez YAML, model językowy, wyniki F1 i wdrożenie na serwerze oceny.</span></a>
+  </div>
+</div>
+
+<!-- ====================== CZĘŚĆ I ====================== -->
+<div class="part"><div class="eyebrow">Część I</div><h2>Instrukcja dla referenta</h2><p>Codzienna praca z aplikacją, bez wiedzy technicznej.</p></div>
+
+<section class="doc" id="co-robi">
+  <h3>Co robi AktoMat</h3>
+  <p>Wrzucasz pliki PDF ze sprawy. AktoMat sam rozpoznaje, co to za dokument, i odczytuje z niego dane: strony postępowania, numery NIP, KRS i REGON, pełnomocników, numer postępowania, datę i rodzaj zaskarżonej czynności, kwotę i tytuł przelewu. Działa też ze skanami.</p>
+  <div class="grid3">
+    <div class="card"><span class="tag t-odw">Odwołanie</span><p style="margin-top:8px">Odwołujący, zamawiający, postępowanie, zaskarżona czynność i jej data, pełnomocnik, podpisy.</p></div>
+    <div class="card"><span class="tag t-pel">Pełnomocnictwo</span><p style="margin-top:8px">Mocodawca, pełnomocnicy, data i miejsce udzielenia, zakres umocowania.</p></div>
+    <div class="card"><span class="tag t-prz">Potwierdzenie przelewu</span><p style="margin-top:8px">Zleceniodawca, odbiorca, rachunki, kwota, data i tytuł przelewu.</p></div>
+  </div>
+  <p>Dokument, który nie jest żadnym z tych trzech (np. odpowiedź na odwołanie, przystąpienie, wyrok, ogłoszenie), zostaje oznaczony jako <b>nierozpoznany</b>. Nazwa pliku nie ma wpływu na rozpoznanie: liczy się treść.</p>
+  <div class="note"><b>Wynik to podpowiedź, nie rozstrzygnięcie.</b>AktoMat nie zgaduje. Jeśli wartości nie ma w dokumencie, pole zostaje puste i jest oznaczone do sprawdzenia. Każdą wartość możesz poprawić, a każda poprawka trafia do dziennika zmian z Twoim imieniem i nazwiskiem.</div>
+</section>
+
+<section class="doc" id="uruchomienie">
+  <h3>Uruchomienie</h3>
+  <ol class="steps">
+    <li>Otwórz folder AktoMat i uruchom <code>start.bat web</code> (dwuklik na skrócie albo w wierszu poleceń). Za pierwszym razem program sam zainstaluje potrzebne składniki, co trwa kilka minut.</li>
+    <li>Otwórz w przeglądarce adres <a href="http://127.0.0.1:8000" id="appUrl">http://127.0.0.1:8000</a>.</li>
+    <li>Wpisz swoje imię i nazwisko w okienku „Kto pracuje nad sprawami?”. Trafia ono do dziennika zmian przy każdej poprawce i zatwierdzeniu. Referenta zmienisz później, klikając nazwisko w górnym pasku.</li>
+  </ol>
+  <p>Ta dokumentacja jest dostępna w aplikacji (menu po lewej, <b>Dokumentacja</b>) albo osobno: <code>start.bat docs</code> otwiera ją pod adresem <code>http://127.0.0.1:8001</code>.</p>
+  <p>Górny pasek pokazuje stan <b>Asystenta AI</b> (włączony / wyłączony / niedostępny), bieżącą sesję i godzinę ostatniego zapisu oraz przycisk trybu jasnego i ciemnego.</p>
+</section>
+
+<section class="doc" id="wczytanie">
+  <h3>Wczytanie sprawy</h3>
+  <p>Na ekranie <b>Wczytaj dokumenty</b> przeciągnij pliki PDF, cały folder sprawy albo archiwum ZIP. Możesz też użyć przycisków „Wybierz pliki PDF”, „Wybierz folder sprawy”, „Wybierz archiwum ZIP”.</p>
+  <ul>
+    <li><b>Jeden folder albo jeden ZIP to jedna sprawa.</b> Nazwa folderu staje się nazwą sprawy. Kilka folderów naraz to kilka spraw.</li>
+    <li>Pliki są przetwarzane od razu. Dokument z warstwą tekstową zajmuje ułamek sekundy, skan kilka sekund na stronę (rozpoznawanie tekstu, OCR).</li>
+    <li>Praca zapisuje się sama. Tabela <b>Zapisane sesje</b> pozwala wrócić do wcześniejszych spraw, a „Nowa sesja” zaczyna od pustej listy.</li>
+  </ul>
+  <figure><button type="button" data-zoom><img src="/dokumentacja/img/start.jpg" alt="Ekran Wczytaj dokumenty: pole do przeciągania plików, lista spraw w sesji i zapisane sesje" loading="lazy" width="1440" height="900"></button><figcaption>Ekran startowy: wczytywanie dokumentów, sprawy w tej sesji i zapisane sesje.</figcaption></figure>
+</section>
+
+<section class="doc" id="pulpit">
+  <h3>Pulpit sprawy</h3>
+  <p>Po kliknięciu sprawy w menu po lewej widzisz jej pulpit. Tytuł to „odwołujący przeciwko zamawiającemu”, pod nim numer postępowania, numery ogłoszeń BZP i TED oraz zaskarżona czynność.</p>
+  <ul>
+    <li><b>Dokumenty w teczce</b>: ile rozpoznano, ile odrzucono.</li>
+    <li><b>Pola do sprawdzenia</b>: brakujące albo niepewne wartości we wszystkich dokumentach.</li>
+    <li><b>Kompletność formalna</b>: liczba braków i czego dotyczą.</li>
+    <li><b>Ostatni dzień na wniesienie odwołania</b>: liczony od daty czynności z odwołania, z pominięciem weekendów i świąt.</li>
+  </ul>
+  <p>W tabeli <b>Teczka sprawy</b> każdy dokument ma rodzaj, pewność rozpoznania i liczbę pól do sprawdzenia. „Otwórz” przechodzi do weryfikacji. Po prawej <b>Kontrola kompletności</b> pokazuje wymagane dokumenty i pola.</p>
+  <figure><button type="button" data-zoom><img src="/dokumentacja/img/sprawa.jpg" alt="Pulpit sprawy z kaflami podsumowania, teczką dokumentów i kontrolą kompletności" loading="lazy" width="1440" height="900"></button><figcaption>Pulpit sprawy: podsumowanie, teczka i kontrola kompletności.</figcaption></figure>
+</section>
+
+<section class="doc" id="weryfikacja">
+  <h3>Weryfikacja danych dokumentu</h3>
+  <p>Po lewej jest podgląd dokumentu, po prawej odczytane pola. Pasek postępu pokazuje, ile pól zatwierdzono.</p>
+  <h4>Jak sprawdzić pole</h4>
+  <ol class="steps">
+    <li>Kliknij pole. Podgląd przewinie się do strony, z której pochodzi wartość, i <b>podświetli ją w dokumencie</b>. Pod polem widać cytat z numerem strony.</li>
+    <li>Jeśli wartość jest dobra, kliknij <b>Zatwierdź</b> albo naciśnij <kbd>Enter</kbd>: pole zostanie zatwierdzone i przejdziesz do następnego.</li>
+    <li>Jeśli jest błędna, popraw ją w polu i naciśnij <kbd>Enter</kbd>. Poprawka trafia do dziennika zmian.</li>
+    <li>Pole puste („nie znaleziono w dokumencie”) uzupełnij ręcznie albo zatwierdź jako puste, jeśli w dokumencie rzeczywiście tego nie ma.</li>
+  </ol>
+  <div class="two">
+    <figure><button type="button" data-zoom><img src="/dokumentacja/img/dokument.jpg" alt="Weryfikacja dokumentu: podgląd PDF i pola do sprawdzenia" loading="lazy" width="1440" height="900"></button><figcaption>Filtr „Do sprawdzenia”: tylko pola, które wymagają uwagi.</figcaption></figure>
+    <figure><button type="button" data-zoom><img src="/dokumentacja/img/zrodlo.jpg" alt="Kliknięte pole NIP podświetlone w podglądzie dokumentu" loading="lazy" width="1440" height="900"></button><figcaption>Kliknięte pole NIP: źródło podświetlone w dokumencie, suma kontrolna poprawna.</figcaption></figure>
+  </div>
+  <h4>Co oznaczają etykiety</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Etykieta</th><th>Znaczenie</th></tr></thead>
+    <tbody>
+      <tr><td><span class="tag t-ok">z tekstu</span></td><td>Wartość odczytana regułą wprost z tekstu dokumentu.</td></tr>
+      <tr><td><span class="tag t-llm">AI</span></td><td>Wartość podana przez model językowy i potwierdzona w tekście dokumentu. Warto ją sprawdzić.</td></tr>
+      <tr><td><span class="tag t-der">wyliczone</span></td><td>Wartość wyliczona z innych pól (np. opis czynności ze słownika powodów).</td></tr>
+      <tr><td><span class="tag t-warn">brak</span></td><td>Nie znaleziono w dokumencie. Wymaga decyzji referenta.</td></tr>
+      <tr><td><span class="tag t-pel">poprawione</span></td><td>Wartość poprawiona ręcznie przez referenta (zapisana w dzienniku zmian).</td></tr>
+      <tr><td><span class="st-bad">Błędna suma kontrolna</span></td><td>NIP, REGON, KRS, PESEL albo numer rachunku nie przechodzi walidacji: zwykle literówka albo błąd odczytu skanu.</td></tr>
+    </tbody>
+  </table></div>
+  <h4>Przydatne elementy ekranu</h4>
+  <ul>
+    <li><b>Filtry</b> „Do sprawdzenia / Zatwierdzone / Wszystkie” i widoki „Dane / JSON / Szczegóły”. JSON to dokładnie ten plik, który trafia do UZP; Szczegóły to pełny ślad odczytu.</li>
+    <li><b>„Dlaczego rozpoznano jako…?”</b> pokazuje punktację każdego rodzaju dokumentu i słowa, które zadecydowały.</li>
+    <li><b>Następny do sprawdzenia</b> przechodzi do kolejnego dokumentu z otwartymi polami. Ekran <b>Kolejka weryfikacji</b> zbiera wszystkie takie dokumenty ze wszystkich spraw.</li>
+    <li>Pola dat mają kalendarz (<kbd>Alt</kbd>+<kbd>↓</kbd> albo <kbd>F4</kbd>).</li>
+    <li>Wyszukiwarka w górnym pasku znajduje sprawę po NIP, nazwie, numerze BZP, numerze postępowania albo nazwie pliku.</li>
+  </ul>
+</section>
+
+<section class="doc" id="kontrola">
+  <h3>Kontrola formalna i eksport sprawy</h3>
+  <p>Przycisk <b>Kontrola formalna i pismo</b> na pulpicie sprawy otwiera zestawienie, które referent zwykle robi ręcznie:</p>
+  <ul>
+    <li><b>Zgodność między dokumentami</b>: czy pełnomocnik z odwołania ma pełnomocnictwo, czy mocodawca to odwołujący, czy NIP-y się zgadzają, czy numer postępowania jest w tytule przelewu.</li>
+    <li><b>Wymagane dokumenty i pola</b>: odwołanie, pełnomocnictwo (gdy jest pełnomocnik), dowód wpisu, dowód opłaty skarbowej, kluczowe pola. Przy każdym braku jest wyjaśnienie, co znaleziono zamiast. „Pomiń” wyłącza pozycję z pisma (np. wpis uiszczono innym dokumentem); pominięcie trafia do dziennika.</li>
+    <li><b>Termin na wniesienie odwołania</b>: data czynności i liczba dni (10 albo 5) dają ostatni dzień, przesunięty z weekendu lub święta.</li>
+    <li><b>Sumy kontrolne</b>: liczba wartości z błędną sumą kontrolną.</li>
+  </ul>
+  <figure><button type="button" data-zoom><img src="/dokumentacja/img/kontrola.jpg" alt="Kontrola formalna: zgodność między dokumentami, termin, sumy kontrolne i eksport" loading="lazy" width="1440" height="900"></button><figcaption>Kontrola formalna sprawy.</figcaption></figure>
+  <h4>Eksport sprawy</h4>
+  <p>Karta <b>Eksport sprawy</b> tworzy paczkę ZIP: dane dokumentów (JSON w formacie UZP), dziennik zmian (CSV), raport kontroli formalnej (CSV) i wiersz do rejestru spraw. Opcja <b>Ukryj dane osobowe</b> zastępuje imiona i nazwiska, e-maile, telefony i PESEL napisem <code>[UKRYTE]</code>, także tam, gdzie pojawiają się w innych polach (np. nazwisko pełnomocnika w tytule przelewu).</p>
+  <p>„Pobierz dane sprawy” na pulpicie i „Pobierz wszystkie wyniki” w menu pobierają same pliki JSON.</p>
+</section>
+
+<section class="doc" id="pismo">
+  <h3>Pismo o uzupełnienie braków</h3>
+  <p>Pod kontrolą formalną jest <b>projekt wezwania do uzupełnienia braków formalnych odwołania</b>. AktoMat wypełnia szablon danymi sprawy i listą braków (bez pozycji pominiętych).</p>
+  <ol class="steps">
+    <li>Wpisz sygnaturę i sprawdź datę pisma.</li>
+    <li>Przejrzyj tekst po prawej. Wartości, których nie ma w dokumentach, zostają w <code>[nawiasach kwadratowych]</code> do uzupełnienia, np. termin i podstawa prawna: AktoMat ich nie zgaduje.</li>
+    <li>Kliknij <b>Pobierz .docx</b> albo <b>Kopiuj tekst</b>, popraw i podpisz pismo we własnym systemie.</li>
+  </ol>
+  <figure><button type="button" data-zoom><img src="/dokumentacja/img/pismo.jpg" alt="Projekt pisma o uzupełnienie braków z polami sygnatury i daty oraz podglądem tekstu" loading="lazy" width="1440" height="900"></button><figcaption>Projekt pisma: lista braków z kontroli, pobieranie .docx.</figcaption></figure>
+</section>
+
+<section class="doc" id="narzedzia">
+  <h3>Rejestr spraw, kalkulator terminów, dziennik zmian</h3>
+  <div class="grid3">
+    <div class="card"><b>Rejestr spraw</b><p>Tabela wszystkich spraw z sesji: odwołujący, zamawiający, numery, terminy, kwota przelewu, stan kontroli. Pobierasz ją jako CSV do arkusza. Sprawy z tym samym postępowaniem lub odwołującym są pokazane jako powiązane.</p></div>
+    <div class="card"><b>Kalkulator terminów</b><p>Rodzaj terminu, data zdarzenia i liczba dni dają ostatni dzień z kalendarzem. Weekendy i święta (także ruchome, jak Wielkanoc i Boże Ciało) są pominięte. Po prawej najbliższe terminy w zapisanych sprawach.</p></div>
+    <div class="card"><b>Dziennik zmian</b><p>Każda poprawka, zatwierdzenie i pominięcie braku: kto, kiedy, w którym dokumencie, wartość przed i po.</p></div>
+  </div>
+  <div class="two">
+    <figure><button type="button" data-zoom><img src="/dokumentacja/img/terminy.jpg" alt="Kalkulator terminów z kalendarzem" loading="lazy" width="1440" height="900"></button><figcaption>Kalkulator terminów.</figcaption></figure>
+    <figure><button type="button" data-zoom><img src="/dokumentacja/img/ciemny.jpg" alt="Pulpit sprawy w trybie ciemnym" loading="lazy" width="1440" height="900"></button><figcaption>Tryb ciemny (przycisk w prawym górnym rogu).</figcaption></figure>
+  </div>
+</section>
+
+<section class="doc" id="asystent">
+  <h3>Asystent AI</h3>
+  <p>Przełącznik <b>Asystent AI</b> w górnym pasku decyduje, czy przy odczycie nowych dokumentów pomaga model językowy. Zmiana działa od razu, bez ponownego uruchamiania.</p>
+  <ul>
+    <li><b>Włączony</b>: model uzupełnia pola, których nie złapały reguły, zwłaszcza w odwołaniach pisanych swobodnie. Każda jego wartość musi wystąpić w tekście dokumentu, inaczej jest odrzucana.</li>
+    <li><b>Wyłączony</b>: same reguły. Dokument nie opuszcza komputera (poza AI nic nie jest wysyłane). Wynik jest nieco uboższy przy nietypowych pismach.</li>
+    <li><b>Niedostępny</b>: brak klucza API w pliku <code>.env</code>. Aplikacja działa wtedy na samych regułach.</li>
+  </ul>
+  <p>Model działa na serwerach w Unii Europejskiej i jest modelem otwartym (open-weight). Szczegóły w części technicznej, <a href="#llm">Model językowy</a>.</p>
+</section>
+
+<section class="doc" id="pytania">
+  <h3>Częste pytania</h3>
+  <h4>Dokument jest nierozpoznany, choć to odwołanie.</h4>
+  <p>Otwórz go i zobacz „Dlaczego rozpoznano jako…?”. Zwykle to słaby skan albo pusty wzór. Rozpoznanie można dostroić wzorcami w pliku YAML klasy (część techniczna).</p>
+  <h4>Skan odczytał się z błędami.</h4>
+  <p>Sprawdź pola z etykietą „brak” albo komunikatem „Błędna suma kontrolna” i porównaj z podświetlonym fragmentem. Najlepszy odczyt daje Tesseract OCR z językiem polskim; bez niego aplikacja używa zapasowego OCR bez polskich znaków.</p>
+  <h4>Czy moje poprawki zmieniają plik PDF?</h4>
+  <p>Nie. Poprawki zmieniają tylko dane (JSON) i są zapisane w dzienniku zmian. Oryginał otworzysz przyciskiem „Oryginał” nad podglądem.</p>
+  <h4>Gdzie są zapisane sesje?</h4>
+  <p>Lokalnie, w folderze <code>sesje/</code> obok aplikacji (albo w folderze wskazanym zmienną <code>AKTOMAT_DANE</code>). Nic nie trafia do repozytorium kodu.</p>
+</section>
+
+<!-- ====================== CZĘŚĆ II ====================== -->
+<div class="part"><div class="eyebrow">Część II</div><h2>Opis techniczny</h2><p>Dla jury, administratora i osoby, która będzie rozwijać konfigurację.</p></div>
+
+<section class="doc" id="architektura">
+  <h3>Architektura</h3>
+  <p>Jeden silnik (<code>odw2json/pipeline.py</code>) obsługuje wsadowe CLI wymagane przez UZP oraz GUI. Cała wiedza o dokumentach jest w plikach YAML, kod jest ogólny.</p>
+  <div class="flow" role="list" aria-label="Kolejne etapy przetwarzania dokumentu">
+    <div class="st" role="listitem"><b>Tekst stron</b><span>PyMuPDF; strona bez tekstu idzie do OCR (Tesseract <code>pol</code>, zapasowo RapidOCR)</span></div><div class="arr" aria-hidden="true">→</div>
+    <div class="st" role="listitem"><b>Klasyfikacja</b><span>ważone wzorce i wzorce negatywne z YAML, próg; poniżej progu pusty JSON <code>{}</code></span></div><div class="arr" aria-hidden="true">→</div>
+    <div class="st" role="listitem"><b>Reguły</b><span>regex, sekcje, bloki podmiotów, podpisy</span></div><div class="arr" aria-hidden="true">+</div>
+    <div class="st" role="listitem"><b>LLM</b><span>prompt z opisów pól w YAML, tryb JSON, temperatura 0</span></div><div class="arr" aria-hidden="true">→</div>
+    <div class="st hl" role="listitem"><b>Wybór i weryfikacja</b><span>pole po polu; wartość musi wystąpić w tekście, format i sumy kontrolne</span></div><div class="arr" aria-hidden="true">→</div>
+    <div class="st" role="listitem"><b>JSON + ślad</b><span>struktura 1:1 z szablonem UZP, ślad per pole (źródło, strona, cytat)</span></div>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Moduł</th><th>Odpowiedzialność</th></tr></thead>
+    <tbody>
+      <tr><td><code>textract.py</code></td><td>tekst stron, wykrywanie skanów, OCR (Tesseract / RapidOCR), odczyt kolumnami</td></tr>
+      <tr><td><code>classify.py</code></td><td>punktacja klas ze wzorców YAML, wzorce negatywne dla podróbek, próg</td></tr>
+      <tr><td><code>rules.py</code></td><td>biblioteka deterministycznych ekstraktorów sterowanych YAML</td></tr>
+      <tr><td><code>llm.py</code></td><td>klient API zgodnego z OpenAI, prompt z opisów pól, ponawianie, limit czasu</td></tr>
+      <tr><td><code>extract.py</code>, <code>normalize.py</code></td><td>łączenie reguł i LLM, normalizacja (daty ISO, kwoty, NIP/KRS/rachunki), weryfikacja w tekście (<code>grounded</code>)</td></tr>
+      <tr><td><code>pipeline.py</code>, <code>cli.py</code></td><td>przetwarzanie katalogu <code>input/</code> → <code>output/</code> + <code>trace/</code>, równoległość, budżet czasu</td></tr>
+      <tr><td><code>evaluate.py</code></td><td>F1 per pole dokładnie wg definicji UZP, raport i lista błędów</td></tr>
+      <tr><td><code>checks.py</code>, <code>anonymize.py</code>, <code>wordfile.py</code></td><td>kontrola formalna, ukrywanie danych osobowych, generowanie .docx (silniki konfigurowane YAML)</td></tr>
+      <tr><td><code>web.py</code>, <code>locate.py</code>, <code>static/</code></td><td>GUI (FastAPI + jedna strona HTML), wyszukiwanie cytatu na stronie PDF do podświetlenia</td></tr>
+      <tr><td><code>docs.py</code>, <code>docs/</code></td><td>ta dokumentacja; sekcja „Konfiguracja na żywo” czytana z YAML przy każdym wejściu</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="nie-zgaduj">
+  <h3>Zasada „nie zgaduj”</h3>
+  <p>Ocena UZP liczy F1 per pole: wartość tam, gdzie wzorzec ma <code>null</code>, to FP, a <code>null</code> przy pustym wzorcu to TN. Dlatego AktoMat woli zostawić pole puste niż wpisać wartość niepewną.</p>
+  <ol>
+    <li>Wartość z LLM jest brana, gdy ma poprawny format i <b>występuje w tekście dokumentu</b> (nazwiska z tolerancją na odmianę, OCR z tolerancją na brak ogonków).</li>
+    <li>W przeciwnym razie wartość z reguł (dla pól z <code>prefer: rules</code> kolejność jest odwrotna).</li>
+    <li>Gdy żadne źródło nie daje wartości potwierdzonej w tekście: <code>null</code>.</li>
+  </ol>
+  <p>Rozbieżności LLM i reguł trafiają do śladu jako uwagi. Ślad <code>trace/&lt;sprawa&gt;/&lt;plik&gt;.trace.json</code> zawiera punktację klasyfikacji, strony po OCR, czas i model, a dla każdego pola wartość, źródło, regułę, stronę i cytat. GUI pokazuje go obok podglądu PDF z podświetleniem źródła.</p>
+</section>
+
+<section class="doc" id="yaml">
+  <h3>Rozszerzanie przez YAML (bez zmian w kodzie)</h3>
+  <p>Nowa klasa dokumentu to nowy plik <code>config/classes/&lt;nazwa&gt;.yaml</code>. Po ponownym uruchomieniu pojawia się w CLI, w GUI (ekran „Typy dokumentów i reguły”) i w tej dokumentacji (<a href="#konfiguracja">Konfiguracja na żywo</a>).</p>
+<pre><code><span class="y-k">name:</span> wezwanie                       <span class="y-c"># nazwa klasy = nazwa wzorcowego JSON-a</span>
+<span class="y-k">description:</span> Wezwanie do uzupełnienia braków formalnych odwołania
+<span class="y-k">classify:</span>
+  <span class="y-k">min_score:</span> 5
+  <span class="y-k">keywords:</span>                          <span class="y-c"># bez wielkości liter i polskich znaków</span>
+    - {<span class="y-k">pattern:</span> <span class="y-s">'wezwanie'</span>, <span class="y-k">weight:</span> 3}
+    - {<span class="y-k">pattern:</span> <span class="y-s">'braki formalne|uzupelnienia'</span>, <span class="y-k">weight:</span> 3}
+  <span class="y-k">negative:</span>                          <span class="y-c"># podróbki i dokumenty podobne</span>
+    - {<span class="y-k">pattern:</span> <span class="y-s">'odpowiedz na odwolanie'</span>, <span class="y-k">weight:</span> 6}
+<span class="y-k">output_template:</span>                     <span class="y-c"># dokładna struktura wynikowego JSON-a</span>
+  <span class="y-k">wezwanie:</span>
+    <span class="y-k">data:</span> null
+    <span class="y-k">sygnatura:</span> null
+    <span class="y-k">termin_dni:</span> null
+<span class="y-k">llm_instructions:</span> |
+  - sygnatura ma postać "KIO 1234/26".
+<span class="y-k">fields:</span>
+  - <span class="y-k">path:</span> wezwanie.data
+    <span class="y-k">type:</span> date
+    <span class="y-k">description:</span> Data wezwania.          <span class="y-c"># opis trafia do promptu LLM</span>
+  - <span class="y-k">path:</span> wezwanie.sygnatura
+    <span class="y-k">type:</span> string
+    <span class="y-k">description:</span> Sygnatura akt KIO.
+    <span class="y-k">rules:</span>                             <span class="y-c"># deterministyczny zapas i weryfikacja</span>
+      - <span class="y-k">pattern:</span> <span class="y-s">'(?P&lt;v&gt;KIO\s*\d+/\d{2})'</span>
+  - <span class="y-k">path:</span> wezwanie.termin_dni
+    <span class="y-k">type:</span> int
+    <span class="y-k">description:</span> Termin na uzupełnienie w dniach.</code></pre>
+  <h4>Typy pól</h4>
+  <p>Typ decyduje o normalizacji i walidacji: <code>string</code>, <code>text</code>, <code>name</code>, <code>person</code>, <code>int</code>, <code>enum</code>, <code>flag</code>, <code>date</code>, <code>amount</code>, <code>nip</code>, <code>krs</code>, <code>regon</code>, <code>pesel</code>, <code>account</code>, <code>email</code>, <code>bzp</code>, <code>ted</code>, <code>refno</code>.</p>
+  <h4>Opcje pola i klasy</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Klucz</th><th>Działanie</th></tr></thead>
+    <tbody>
+      <tr><td><code>rules</code></td><td>lista reguł, pierwsza niepusta wygrywa (rodzaje w tabeli poniżej)</td></tr>
+      <tr><td><code>prefer: llm | rules</code></td><td>które źródło ma pierwszeństwo przy wyborze wartości</td></tr>
+      <tr><td><code>require_grounding</code></td><td>czy wartość musi wystąpić w tekście (domyślnie tak)</td></tr>
+      <tr><td><code>derive</code></td><td>pole wyliczane z innych pól (<code>from</code> może być listą)</td></tr>
+      <tr><td><code>cast</code></td><td>wymuszenie typu w JSON: <code>str</code>, <code>int</code>, <code>float</code></td></tr>
+      <tr><td><code>vocabulary</code></td><td>słownik poprawnych zapisów, np. <code>config/slowniki/miejscowosci.txt</code> („Krakow” ze skanu → „Kraków”)</td></tr>
+      <tr><td><code>sections</code>, <code>lists</code></td><td>wycinki dokumentu (<code>end</code>, <code>max_chars</code>, <code>before</code>) i podział na wiele podmiotów</td></tr>
+      <tr><td><code>classify.negative</code></td><td>wzorce odcinające podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wzór)</td></tr>
+      <tr><td><code>ocr_layout: columns</code></td><td>odczyt skanu kolumnami (bloki podpisów obok siebie)</td></tr>
+    </tbody>
+  </table></div>
+  <h4>Rodzaje reguł</h4>
+  <div class="tablewrap"><table id="ruleKinds">
+    <thead><tr><th>Rodzaj</th><th>Działanie</th></tr></thead>
+    <tbody><tr><td colspan="2">Wczytywanie z <code>odw2json/rules.py</code>…</td></tr></tbody>
+  </table></div>
+  <h4>Pozostała konfiguracja w YAML</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Plik</th><th>Co konfiguruje</th></tr></thead>
+    <tbody>
+      <tr><td><code>config/settings.yaml</code></td><td>model i profile LLM, OCR, równoległość, budżet czasu, zawartość pliku dla dokumentu spoza klas</td></tr>
+      <tr><td><code>config/kontrola.yaml</code></td><td>wymagane dokumenty i pola, porównania między dokumentami (<code>zawiera_sie</code>, <code>rowne</code>, <code>w_tekscie</code>, próg podobieństwa), terminy, święta, walidacja sum kontrolnych</td></tr>
+      <tr><td><code>config/pisma.yaml</code></td><td>szablony pism ze zmiennymi (<code>{odwolujacy}</code>, <code>{braki}</code>, <code>{sygnatura}</code>…) i formatowaniem .docx</td></tr>
+      <tr><td><code>config/eksport.yaml</code></td><td>ukrywanie danych osobowych (pola i wzorce) oraz kolumny rejestru spraw</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="konfiguracja">
+  <h3>Konfiguracja na żywo <span class="live" id="liveBadge" hidden>czytana z YAML</span></h3>
+  <p>Poniższe dane strona pobiera z bieżących plików <code>config/*.yaml</code> przy każdym otwarciu. Dodanie klasy, pola albo reguły kontroli pokazuje się tu automatycznie.</p>
+  <div id="live"><p class="note warn">Ta część wymaga uruchomienia dokumentacji przez <code>start.bat docs</code> albo z aplikacji (<code>/dokumentacja</code>).</p></div>
+</section>
+
+<section class="doc" id="llm">
+  <h3>Model językowy</h3>
+  <ul>
+    <li><b>Tylko modele open-weight</b> przez API zgodne z OpenAI, u dostawców z siedzibą i serwerami w UE (wymóg FAQ UZP). Ten sam kod działa z lokalnym vLLM / Ollama po zmianie adresu.</li>
+    <li><b>Profile</b> w <code>config/settings.yaml</code> (<code>llm.profiles</code>), wybierane w <code>.env</code> przez <code>LLM_PROFILE=&lt;nazwa&gt;</code> i klucz <code>&lt;NAZWA&gt;_API_KEY</code>. Zalecany: <code>ovh</code> (OVHcloud AI Endpoints, Francja, <code>gpt-oss-20b</code>), najlepszy wynik na skanach. Domyślny bez profilu: Scaleway (Paryż), <code>gpt-oss-120b</code>. <code>groq</code> służy tylko do testów (firma z USA).</li>
+    <li><b>Parametry</b>: temperatura 0, tryb JSON, do 24 000 znaków dokumentu na zapytanie, limit 90 s na zapytanie, 3 próby.</li>
+    <li><b>Rola modelu</b>: uzupełnia pola wg opisów z YAML. Każda wartość jest weryfikowana w tekście i formatem; reguły działają jako weryfikacja i zapas.</li>
+    <li><b>Bez klucza</b> albo przy awarii API aplikacja nie przerywa pracy: zwraca wynik z reguł, a błąd zapisuje w śladzie.</li>
+    <li><b>Limit czasu UZP</b> (150 PDF w 45 min): <code>time_budget_s</code> (domyślnie 2400 s). Po przekroczeniu budżetu pozostałe dokumenty liczone są samymi regułami, więc wynik zawsze powstaje w limicie.</li>
+    <li><b>OCR jest lokalny</b> (Tesseract), więc nie jest usługą zewnętrzną.</li>
+  </ul>
+  <h4>Plik <code>.env</code></h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Zmienna</th><th>Znaczenie</th></tr></thead>
+    <tbody>
+      <tr><td><code>LLM_PROFILE</code></td><td>nazwa profilu z <code>settings.yaml</code>, np. <code>ovh</code></td></tr>
+      <tr><td><code>OVH_API_KEY</code>, <code>GROQ_API_KEY</code>…</td><td>klucz dla wybranego profilu; model profilu można nadpisać przez <code>&lt;NAZWA&gt;_MODEL</code></td></tr>
+      <tr><td><code>LLM_API_KEY</code>, <code>LLM_BASE_URL</code>, <code>LLM_MODEL</code></td><td>ręczna konfiguracja bez profilu (dowolne API zgodne z OpenAI)</td></tr>
+      <tr><td><code>LLM_ENABLED</code></td><td><code>0</code> = same reguły</td></tr>
+      <tr><td><code>TESSERACT_CMD</code>, <code>TESSDATA_PREFIX</code></td><td>ścieżka do Tesseracta i folderu z <code>pol.traineddata</code> (<code>start.bat</code> pobiera go sam do <code>./tessdata</code>)</td></tr>
+      <tr><td><code>AKTOMAT_DANE</code></td><td>folder na sesje GUI (domyślnie <code>sesje/</code>)</td></tr>
+      <tr><td><code>ODW2JSON_ENV</code></td><td>ścieżka do pliku <code>.env</code>, jeśli nie leży w katalogu bieżącym ani w katalogu aplikacji</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note warn"><b>Klucz API nigdy nie trafia do repozytorium.</b>Plik <code>.env</code> jest w <code>.gitignore</code>; klucz dla jury przekazujemy osobno.</p>
+</section>
+
+<section class="doc" id="wyniki">
+  <h3>Wyniki F1</h3>
+  <p>Ewaluacja (<code>python -m odw2json eval --gt &lt;dane&gt;</code>) liczy F1 dokładnie według definicji UZP: TP = wartość zgodna (długie napisy: podobieństwo ≥ 80%), TN = <code>null</code> w obu, FP = wartość błędna lub zbędna, FN = brak wartości obecnej we wzorcu. Raport: <code>eval_report/raport.md</code> (F1 per klasa i per pole) i <code>bledy.csv</code> (każda pomyłka).</p>
+  <div class="grid3">
+    <div class="card"><div class="stat">0.9995</div><p>60 spraw treningowych UZP, reguły + LLM; 180/180 plików identycznych ze wzorcem</p></div>
+    <div class="card"><div class="stat">0.949</div><p>skany UZP (30 dokumentów, inne szablony), reguły + gpt-oss-20b</p></div>
+    <div class="card"><div class="stat">196/196</div><p>poprawna klasyfikacja: 60 spraw + 16 dokumentów negatywnych UZP</p></div>
+  </div>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Zbiór</th><th>Tryb</th><th class="num">F1</th></tr></thead>
+    <tbody>
+      <tr><td>60 spraw treningowych UZP (PDF z tekstem)</td><td>same reguły</td><td class="num">1.000</td></tr>
+      <tr><td>j.w.</td><td>reguły + gpt-oss-120b</td><td class="num">0.9995</td></tr>
+      <tr><td>60 spraw jako skany 150 dpi, Tesseract <code>pol</code></td><td>same reguły</td><td class="num">0.984</td></tr>
+      <tr><td>12 spraw jako skany, zapasowy RapidOCR</td><td>same reguły</td><td class="num">0.915</td></tr>
+      <tr><td>skany UZP <code>dane/skany</code> (10+10+10, inne szablony)</td><td>same reguły</td><td class="num">0.875</td></tr>
+      <tr><td>j.w.</td><td>reguły + gpt-oss-120b (117B)</td><td class="num">0.937</td></tr>
+      <tr class="best"><td>j.w.</td><td>reguły + gpt-oss-20b (21B), profil <code>ovh</code></td><td class="num">0.949</td></tr>
+      <tr><td>j.w.</td><td>reguły + Qwen 3.8 27B</td><td class="num">0.942</td></tr>
+      <tr><td>j.w.</td><td>reguły + ALLaM 7B</td><td class="num">0.801</td></tr>
+    </tbody>
+  </table></div>
+  <p>Na skanach mniejszy model daje tyle co duży, bo LLM tylko uzupełnia pola, których nie złapały reguły, a każda jego wartość jest weryfikowana w tekście. Wynik na danych treningowych jest optymistyczny (reguły strojone na tych samych szablonach); przy swobodnie pisanych odwołaniach główną pracę wykonuje LLM, a reguły weryfikują.</p>
+</section>
+
+<section class="doc" id="wdrozenie">
+  <h3>Uruchomienie i wdrożenie</h3>
+  <h4>Lokalnie</h4>
+<pre><code>:: Windows (Python 3.13+, zalecany Tesseract z językiem polskim)
+copy .env.example .env        &amp;:: klucz API, np. LLM_PROFILE=ovh i OVH_API_KEY=...
+start.bat                     &amp;:: input\ -&gt; output\  (wsadowo, jak u UZP)
+start.bat web                 &amp;:: GUI: http://127.0.0.1:8000
+start.bat docs                &amp;:: dokumentacja: http://127.0.0.1:8001
+
+# Linux / macOS
+cp .env.example .env &amp;&amp; ./start.sh
+./start.sh web
+./start.sh docs</code></pre>
+  <p><code>start.bat</code> / <code>start.sh</code> tworzą <code>.venv</code>, instalują <code>requirements.txt</code>, a na Windows pobierają polski język dla Tesseracta, jeśli go brakuje.</p>
+  <h4>Polecenia CLI</h4>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Polecenie</th><th>Działanie</th></tr></thead>
+    <tbody>
+      <tr><td><code>python -m odw2json</code></td><td>przetwarza <code>input/</code> do <code>output/</code>, ślad w <code>trace/</code></td></tr>
+      <tr><td><code>python -m odw2json run -i DIR -o DIR [--no-llm] [-w N]</code></td><td>j.w. z wyborem katalogów, bez LLM, liczba równoległych dokumentów</td></tr>
+      <tr><td><code>python -m odw2json eval --gt DANE [--no-llm]</code></td><td>F1 względem wzorcowych JSON-ów</td></tr>
+      <tr><td><code>python -m odw2json web [--port 8000]</code></td><td>GUI (z dokumentacją pod <code>/dokumentacja</code>)</td></tr>
+      <tr><td><code>python -m odw2json docs [--port 8001] [--no-browser]</code></td><td>sama dokumentacja</td></tr>
+      <tr><td><code>python -m odw2json classes</code></td><td>lista skonfigurowanych klas</td></tr>
+    </tbody>
+  </table></div>
+  <h4>Wejście i wyjście</h4>
+<pre><code>input/                       output/                      trace/
+├── sprawa1/                 ├── sprawa1/                 ├── sprawa1/
+│   ├── odwolanie.pdf        │   ├── odwolanie.json       │   ├── odwolanie.trace.json
+│   ├── pelnomocnictwo.pdf   │   ├── pelnomocnictwo.json  │   └── ...
+│   ├── przelew.pdf          │   ├── przelew.json
+│   └── ogloszenie_TED.pdf   │   └── ogloszenie_TED.json  ← dokument spoza klas: {}</code></pre>
+  <h4>Serwer oceny UZP (VM.md)</h4>
+  <p>Ubuntu 24.04, 2 vCPU, bez GPU. Jury uruchamia komendę z <code>/opt/solution/RUN.md</code> bez interakcji.</p>
+<pre><code>cd /opt/solution
+git clone https://github.com/JaQubus/AktoMat.git repo
+bash repo/deploy/vm_setup.sh     # Tesseract z polskim, Python 3.13, venv, RUN.md, test
+nano /opt/solution/.env          # LLM_PROFILE=ovh, OVH_API_KEY=...
+sudo bash repo/deploy/run.sh     # komenda oceny: /opt/solution/input -&gt; /opt/solution/output</code></pre>
+</section>
+
+<section class="doc" id="zgodnosc">
+  <h3>Zgodność z wymaganiami UZP</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Wymaganie</th><th>Jak spełnione</th></tr></thead>
+    <tbody>
+      <tr><td>PDF → rozpoznanie typu → JSON wg <code>oczekiwane-json</code></td><td>klasy w <code>config/classes/*.yaml</code>, <code>output_template</code> 1:1 ze wzorcami</td></tr>
+      <tr><td>klasyfikacja po treści, nie po nazwie pliku</td><td><code>filename_weight: 0</code>, test <code>test_filename_does_not_decide_class</code></td></tr>
+      <tr><td>dokument spoza klas → pusty <code>.json</code></td><td>plik z <code>{}</code>, 16/16 negatywów UZP</td></tr>
+      <tr><td><code>input/</code> i <code>output/</code>, JSON o tej samej nazwie co PDF, drzewo spraw</td><td><code>python -m odw2json</code> / <code>start.bat</code> / <code>deploy/run.sh</code></td></tr>
+      <tr><td>CLI, GUI dodatkowo</td><td><code>start.bat</code>, <code>start.sh</code>, <code>web</code>, <code>docs</code></td></tr>
+      <tr><td>Python 3.13+, <code>requirements.txt</code></td><td>tak (CLI ostrzega przy starszym Pythonie)</td></tr>
+      <tr><td>open source, bez GPU, LLM po API z UE</td><td>modele open-weight, profile <code>ovh</code> / Scaleway, klucz w <code>.env</code></td></tr>
+      <tr><td>skany</td><td>OCR lokalny: Tesseract <code>pol</code>, zapasowo RapidOCR</td></tr>
+      <tr><td>150 PDF w 45 min</td><td><code>time_budget_s</code>, potem same reguły</td></tr>
+      <tr><td>nowe klasy bez zmian w kodzie</td><td>tylko YAML (<a href="#yaml">Rozszerzanie przez YAML</a>)</td></tr>
+      <tr><td>transparentność</td><td>ślad per pole w <code>trace/</code> i GUI z podświetleniem źródła</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="repo">
+  <h3>Struktura repozytorium i testy</h3>
+<pre><code>odw2json/            kod: pipeline, OCR, klasyfikacja, reguły, LLM, ewaluacja, GUI, dokumentacja
+odw2json/static/     GUI (jedna strona HTML)
+config/settings.yaml ustawienia ogólne (model, OCR, równoległość, budżet czasu)
+config/classes/      definicje klas dokumentów
+config/kontrola.yaml kontrola formalna     config/pisma.yaml  szablony pism
+config/eksport.yaml  anonimizacja, rejestr  config/slowniki/   słowniki zapisów
+deploy/              instalacja i uruchomienie na serwerze oceny UZP
+docs/                ta dokumentacja (index.html + zrzuty ekranu)
+input/ output/       foldery wejścia i wyjścia wymagane przez UZP
+tests/               testy (pytest)</code></pre>
+  <p>Testy: <code>python -m pytest -q</code>. Obejmują normalizację, reguły i ewaluację, odporność na podróbki i mylące nazwy plików, kontrolę formalną, API GUI i dokumentację.</p>
+</section>
+
+<footer>AktoMat · HackNation 2026, wyzwanie UZP „Odwołania2JSON”. Zrzuty ekranu pokazują fikcyjne sprawy ze zbioru treningowego UZP.</footer>
+</main>
+</div>
+
+<dialog class="zoom" id="zoom" aria-label="Powiększony zrzut ekranu"><form method="dialog"><button>Zamknij</button></form><img alt=""></dialog>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* motyw wspólny z aplikacją */
+try { const t = localStorage.getItem("o2j-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+$("#theme").onclick = () => {
+  const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const t = cur === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("o2j-theme", t); } catch (e) {}
+};
+
+/* link do aplikacji: z osobnego serwera dokumentacji (8001) prowadzi do GUI na 8000 */
+if (location.protocol.startsWith("http") && location.port === "8001") {
+  const u = `${location.protocol}//${location.hostname}:8000/`;
+  $("#appLink").href = u; $("#appLink").title = "Wymaga uruchomionego start.bat web";
+} else if (!location.protocol.startsWith("http")) {
+  $("#appLink").href = "http://127.0.0.1:8000/";
+}
+
+/* spis treści: menu na wąskim ekranie i podświetlenie bieżącej sekcji */
+$("#menu").onclick = () => { const o = document.body.classList.toggle("toc-open"); $("#menu").setAttribute("aria-expanded", o); };
+$$("#toc a").forEach(a => a.addEventListener("click", () => { document.body.classList.remove("toc-open"); $("#menu").setAttribute("aria-expanded", "false"); }));
+const links = new Map($$("#toc a").map(a => [a.getAttribute("href").slice(1), a]));
+const obs = new IntersectionObserver((ents) => {
+  ents.forEach(e => { if (e.isIntersecting) { links.forEach(a => a.removeAttribute("aria-current")); links.get(e.target.id)?.setAttribute("aria-current", "true"); } });
+}, { rootMargin: "-80px 0px -65% 0px" });
+links.forEach((_, id) => { const el = document.getElementById(id); if (el) obs.observe(el); });
+
+/* powiększanie zrzutów */
+$$("[data-zoom]").forEach(b => b.onclick = () => { const img = b.querySelector("img"); const z = $("#zoom img"); z.src = img.src; z.alt = img.alt; $("#zoom").showModal(); });
+$("#zoom").addEventListener("click", (e) => { if (e.target.id === "zoom") $("#zoom").close(); });
+
+/* obrazy działają też przy otwarciu pliku docs/index.html wprost z dysku */
+if (!location.protocol.startsWith("http")) $$("img[src^='/dokumentacja/img/']").forEach(i => i.src = "img/" + i.getAttribute("src").split("/").pop());
+
+/* konfiguracja na żywo z config/*.yaml */
+const KL = { odwolanie: "t-odw", pelnomocnictwo: "t-pel", przelew: "t-prz" };
+const ZR = { rules: ["najpierw reguły", "t-ok"], llm: ["najpierw LLM", "t-llm"], "wyliczane": ["wyliczane", "t-der"] };
+const table = (head, rows) => `<div class="tablewrap"><table><thead><tr>${head.map(h => `<th${h.startsWith("#") ? ' class="num"' : ""}>${esc(h.replace(/^#/, ""))}</th>`).join("")}</tr></thead><tbody>${rows.join("")}</tbody></table></div>`;
+const POZ = (p) => p === "brak" ? '<span class="tag t-bad">brak formalny</span>' : '<span class="tag t-warn">ostrzeżenie</span>';
+const TRYB = { zawiera_sie: "każda wartość z A jest w B", rowne: "wartość A równa wartości B", w_tekscie: "wartość A występuje w tekście B" };
+
+async function live() {
+  let d;
+  try { const r = await fetch("/dokumentacja/konfiguracja.json"); if (!r.ok) throw 0; d = await r.json(); } catch (e) { return; }
+  $("#liveBadge").hidden = false;
+  $("#ruleKinds tbody").innerHTML = d.reguly.map(r => `<tr><td><code>${esc(r.nazwa)}</code></td><td>${esc(r.opis)}</td></tr>`).join("");
+  const nPol = d.klasy.reduce((s, c) => s + c.pola.length, 0);
+  let h = `<div class="grid3">
+    <div class="card"><div class="stat">${d.klasy.length}</div><p>klasy dokumentów (${d.klasy.map(c => esc(c.plik)).join(", ")})</p></div>
+    <div class="card"><div class="stat">${nPol}</div><p>pól w szablonach JSON</p></div>
+    <div class="card"><div class="stat">${d.kontrola.wymagane.length + d.kontrola.pola.length + d.kontrola.zgodnosc.length}</div><p>reguł kontroli formalnej w <code>kontrola.yaml</code></p></div>
+  </div><h4>Klasy dokumentów</h4>`;
+  for (const c of d.klasy) {
+    const rows = c.pola.map(f => {
+      const z = ZR[f.zrodlo] || ["najpierw LLM", "t-llm"];
+      return `<tr><td><code>${esc(f.sciezka)}</code></td><td><code>${esc(f.typ)}</code></td><td>${esc(f.opis)}</td><td><span class="tag ${z[1]}">${esc(z[0])}</span></td><td>${f.reguly.length ? f.reguly.map(r => `<code>${esc(r)}</code>`).join(" ") : "—"}${f.slownik ? ' <span class="tag t-der">słownik</span>' : ""}</td></tr>`;
+    });
+    h += `<details class="cls"><summary><span class="tag ${KL[c.nazwa] || "t-ok"}">${esc(c.nazwa)}</span><b>${esc(c.opis)}</b><span class="meta"><code>${esc(c.plik)}</code> · ${c.pola.length} pól · próg ${esc(c.prog)} pkt · ${c.slowa_kluczowe} wzorców, ${c.wykluczenia} wykluczeń${c.ocr_layout ? " · OCR: " + esc(c.ocr_layout) : ""}</span></summary>
+      ${table(["Ścieżka pola", "Typ", "Opis (trafia do promptu LLM)", "Pierwszeństwo", "Reguły"], rows)}</details>`;
+  }
+  const k = d.kontrola;
+  h += `<h4>Kontrola formalna (<code>kontrola.yaml</code>)</h4>`;
+  h += table(["Wymagany dokument", "Klasa", "Poziom"], k.wymagane.map(w => `<tr><td>${esc(w.opis)}</td><td><code>${esc(w.klasa)}</code></td><td>${POZ(w.poziom)}</td></tr>`).concat(
+    k.pola.map(w => `<tr><td>${esc(w.opis)}</td><td><code>${esc(w.pole)}</code></td><td>${POZ(w.poziom)}</td></tr>`)));
+  h += table(["Porównanie między dokumentami", "Tryb"], k.zgodnosc.map(z => `<tr><td>${esc(z.opis)}</td><td><code>${esc(z.tryb)}</code> ${esc(TRYB[z.tryb] || "")}</td></tr>`));
+  h += table(["Termin", "Dni"], k.terminy.map(t => `<tr><td>${esc(t.opis)}</td><td>${esc(t.dni)}${t.warianty ? " (warianty: " + t.warianty.map(esc).join(", ") + ")" : ""}</td></tr>`));
+  h += `<p>Walidacja sum kontrolnych: ${Object.entries(k.walidacja).map(([p, v]) => `<code>${esc(p)}</code> → ${esc(v)}`).join(", ")}.</p>`;
+  h += `<h4>Pisma i eksport</h4><p>Szablony pism (<code>pisma.yaml</code>): ${d.pisma.map(esc).join(", ") || "—"}. Ukrywane pola (<code>eksport.yaml</code>): ${d.eksport.ukrywane_pola.map(p => `<code>${esc(p)}</code>`).join(", ")}. Kolumny rejestru: ${d.eksport.kolumny_rejestru.map(esc).join(", ")}.</p>`;
+  const L = d.llm, O = d.ocr;
+  h += `<h4>Model i OCR (<code>settings.yaml</code>, nadpisywane przez <code>.env</code>)</h4>`;
+  h += table(["Ustawienie", "Wartość"], [
+    `<tr><td>Model domyślny</td><td><code>${esc(L.model)}</code> · ${esc(L.adres)}</td></tr>`,
+    `<tr><td>Profile dostawców</td><td>${L.profile.map(p => `<code>${esc(p.nazwa)}</code>: ${esc(p.model)}`).join("<br>")}</td></tr>`,
+    `<tr><td>Temperatura, limit zapytania, tekst do modelu</td><td>${esc(L.temperatura)} · ${esc(L.limit_s)} s · ${esc(L.znaki_dokumentu)} znaków</td></tr>`,
+    `<tr><td>OCR</td><td>${O.wlaczony ? "włączony" : "wyłączony"}, silnik <code>${esc(O.silnik)}</code>, język <code>${esc(O.jezyk)}</code>, ${esc(O.dpi)} dpi, do ${esc(O.max_stron)} stron</td></tr>`,
+    `<tr><td>Równoległość, budżet czasu partii</td><td>${esc(d.rownoleglosc)} dokumenty · ${esc(d.budzet_s)} s</td></tr>`,
+    `<tr><td>Plik dla dokumentu spoza klas</td><td><code>${esc(d.pusty_json)}</code></td></tr>`]);
+  $("#live").innerHTML = h;
+}
+live();
+</script>
+</body>
+</html>

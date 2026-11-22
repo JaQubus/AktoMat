@@ -191,3 +191,23 @@ def test_przelacznik_ai_wylacza_llm_bez_restartu(client, monkeypatch):
     res = client.post("/api/extract", files={"files": ("dowod.pdf", _pdf(PRZELEW), "application/pdf")},
                       data={"ai": "0"}).json()
     assert res[0]["klasa"] == "przelew" and not res[0]["slad"].get("llm_uzyty")
+
+
+def test_dokumentacja_w_gui_i_osobno(client):
+    """Dokumentacja: strona, obrazy i konfiguracja na żywo z YAML (bez kluczy API)."""
+    from odw2json import docs
+    from odw2json.config import load_classes
+
+    r = client.get("/dokumentacja")
+    assert r.status_code == 200 and "Instrukcja dla referenta" in r.text
+    assert client.get("/dokumentacja/img/sprawa.jpg").status_code == 200
+    assert client.get("/dokumentacja/img/..%2Fconfig.py").status_code == 404
+    k = client.get("/dokumentacja/konfiguracja.json").json()
+    assert [c["nazwa"] for c in k["klasy"]] == [c.name for c in load_classes()]
+    assert {"regex", "sentence_map"} <= {r["nazwa"] for r in k["reguly"]}
+    assert k["kontrola"]["wymagane"] and k["llm"]["profile"]
+    assert "api_key" not in str(k).lower()
+
+    solo = TestClient(docs.app)
+    assert solo.get("/", follow_redirects=False).headers["location"] == "/dokumentacja"
+    assert solo.get("/dokumentacja/konfiguracja.json").status_code == 200
