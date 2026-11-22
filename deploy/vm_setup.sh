@@ -25,5 +25,5 @@ chmod +x "$REPO/deploy/run.sh"
 echo "--- kontrola ---"
 tesseract --list-langs 2>/dev/null | grep -qx pol && echo "Tesseract: pol OK" || echo "[BŁĄD] Tesseract bez języka pol"
 "$REPO/.venv/bin/python" --version
-"$REPO/.venv/bin/python" -m pytest -q "$REPO/tests" | tail -1
+(cd "$REPO" && .venv/bin/python -m pytest -q tests | tail -1)
 echo "Gotowe. Test jak u oceniających: wrzuć PDF-y do $SOL/input, wyczyść $SOL/output i uruchom komendę z $SOL/RUN.md"
