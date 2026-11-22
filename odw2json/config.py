@@ -35,6 +35,7 @@ class FieldSpec:
     prefer: str | None = None      # llm | rules; brak = `prefer` klasy (domyślnie llm)
     derive: dict | None = None     # pole wyliczane z innych pól
     require_grounding: bool = True  # wartość musi występować w tekście
+    llm: bool = True               # false = wartość tylko z reguł/wyliczenia, odpowiedź LLM pomijana
     default: object = None
     cast: str | None = None        # wymuszenie typu w JSON: str | int | float
     vocabulary: str | list | None = None  # słownik poprawnych zapisów (lista albo plik w config/), np. miejscowości z ogonkami

@@ -443,6 +443,7 @@
       <tr><td><code>rules</code></td><td>lista reguł, pierwsza niepusta wygrywa (rodzaje w tabeli poniżej)</td></tr>
       <tr><td><code>prefer: llm | rules</code></td><td>które źródło ma pierwszeństwo przy wyborze wartości</td></tr>
       <tr><td><code>require_grounding</code></td><td>czy wartość musi wystąpić w tekście (domyślnie tak)</td></tr>
+      <tr><td><code>llm: false</code></td><td>pole tylko z reguł lub wyliczenia, odpowiedź LLM jest pomijana (np. data i miejscowość z nagłówka)</td></tr>
       <tr><td><code>derive</code></td><td>pole wyliczane z innych pól (<code>from</code> może być listą)</td></tr>
       <tr><td><code>cast</code></td><td>wymuszenie typu w JSON: <code>str</code>, <code>int</code>, <code>float</code></td></tr>
       <tr><td><code>vocabulary</code></td><td>słownik poprawnych zapisów, np. <code>config/slowniki/miejscowosci.txt</code> („Krakow” ze skanu → „Kraków”)</td></tr>
