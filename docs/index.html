@@ -478,7 +478,7 @@
   <h3>Model językowy</h3>
   <ul>
     <li><b>Tylko modele open-weight</b> przez API zgodne z OpenAI, u dostawców z siedzibą i serwerami w UE (wymóg FAQ UZP). Ten sam kod działa z lokalnym vLLM / Ollama po zmianie adresu.</li>
-    <li><b>Profile</b> w <code>config/settings.yaml</code> (<code>llm.profiles</code>), wybierane w <code>.env</code> przez <code>LLM_PROFILE=&lt;nazwa&gt;</code> i klucz <code>&lt;NAZWA&gt;_API_KEY</code>. Zalecany: <code>ovh</code> (OVHcloud AI Endpoints, Francja, <code>gpt-oss-20b</code>), najlepszy wynik na skanach. Domyślny bez profilu: Scaleway (Paryż), <code>gpt-oss-120b</code>. <code>groq</code> służy tylko do testów (firma z USA).</li>
+    <li><b>Profile</b> w <code>config/settings.yaml</code> (<code>llm.profiles</code>), wybierane w <code>.env</code> przez <code>LLM_PROFILE=&lt;nazwa&gt;</code> i klucz <code>&lt;NAZWA&gt;_API_KEY</code>. Zalecany: <code>ovh</code> (OVHcloud AI Endpoints, Francja, <code>gpt-oss-20b</code>), najlepszy wynik na skanach. Domyślny bez profilu: Scaleway (Paryż), <code>gpt-oss-120b</code>. <code>ark</code>: ARK Labs (polska firma, infrastruktura w UE), Bielik 11B v3.0, klucz <code>ARK_API_KEY</code>. <code>groq</code> służy tylko do testów (firma z USA).</li>
     <li><b>Parametry</b>: temperatura 0, tryb JSON, do 24 000 znaków dokumentu na zapytanie, limit 90 s na zapytanie, 3 próby.</li>
     <li><b>Rola modelu</b>: uzupełnia pola wg opisów z YAML. Każda wartość jest weryfikowana w tekście i formatem; reguły działają jako weryfikacja i zapas.</li>
     <li><b>Bez klucza</b> albo przy awarii API aplikacja nie przerywa pracy: zwraca wynik z reguł, a błąd zapisuje w śladzie.</li>
@@ -579,7 +579,7 @@ sudo bash repo/deploy/run.sh     # komenda oceny: /opt/solution/input -&gt; /opt
       <tr><td><code>input/</code> i <code>output/</code>, JSON o tej samej nazwie co PDF, drzewo spraw</td><td><code>python -m odw2json</code> / <code>start.bat</code> / <code>deploy/run.sh</code></td></tr>
       <tr><td>CLI, GUI dodatkowo</td><td><code>start.bat</code>, <code>start.sh</code>, <code>web</code>, <code>docs</code></td></tr>
       <tr><td>Python 3.13+, <code>requirements.txt</code></td><td>tak (CLI ostrzega przy starszym Pythonie)</td></tr>
-      <tr><td>open source, bez GPU, LLM po API z UE</td><td>modele open-weight, profile <code>ovh</code> / Scaleway, klucz w <code>.env</code></td></tr>
+      <tr><td>open source, bez GPU, LLM po API z UE</td><td>modele open-weight, profile <code>ovh</code> / <code>ark</code> / Scaleway, klucz w <code>.env</code></td></tr>
       <tr><td>skany</td><td>OCR lokalny: Tesseract <code>pol</code>, zapasowo RapidOCR</td></tr>
       <tr><td>150 PDF w 45 min</td><td><code>time_budget_s</code>, potem same reguły</td></tr>
       <tr><td>nowe klasy bez zmian w kodzie</td><td>tylko YAML (<a href="#yaml">Rozszerzanie przez YAML</a>)</td></tr>

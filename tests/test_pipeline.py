@@ -72,3 +72,16 @@ def test_time_budget_skips_llm():
         assert False, "powinien pominąć LLM"
     except LLMError as e:
         assert "limit czasu" in str(e)
+
+
+def test_ark_profile(monkeypatch):
+    from odw2json.config import load_settings
+    monkeypatch.setenv("LLM_PROFILE", "ark")
+    monkeypatch.setenv("ARK_API_KEY", "test-key")
+    monkeypatch.delenv("ARK_MODEL", raising=False)
+    monkeypatch.delenv("ARK_BASE_URL", raising=False)
+    llm = load_settings()["llm"]
+    assert llm["base_url"] == "https://api.ark-labs.cloud/api/v1"
+    assert llm["model"] == "arklabsai/Bielik-11B-v3.0-Instruct"
+    assert llm["api_key"] == "test-key"
+    assert not llm.get("extra_body")   # ARK odrzuca nieznane pola, np. reasoning_effort

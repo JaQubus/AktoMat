@@ -69,7 +69,7 @@ Konfiguracja w `.env` (szablon: `.env.example`), domyślnie:
 
 Domyślny dostawca to **Scaleway Generative APIs (Paryż, UE)**, zgodnie z wymogiem FAQ: usługodawca i serwer w UE, model z możliwością instalacji lokalnej. Ten sam kod działa z lokalnym serwerem (vLLM, Ollama) po zmianie `LLM_BASE_URL` i `LLM_MODEL`. Gdy LLM jest niedostępny, aplikacja nie przerywa pracy: zwraca wynik z reguł i zapisuje błąd w śladzie.
 
-**Profile dostawców.** Zamiast przepisywać `LLM_*`, w `.env` można dopisać `LLM_PROFILE=<nazwa>` i klucz `<NAZWA>_API_KEY`. Profile są w `config/settings.yaml` (`llm.profiles`): `ovh` (OVHcloud AI Endpoints, UE, `gpt-oss-20b`), `sherlock` (CloudFerro, UE, Bielik 11B / PLLuM 12B / Llama 3.1 8B), `groq` (tylko testy). Model profilu można nadpisać przez `<NAZWA>_MODEL`.
+**Profile dostawców.** Zamiast przepisywać `LLM_*`, w `.env` można dopisać `LLM_PROFILE=<nazwa>` i klucz `<NAZWA>_API_KEY`. Profile są w `config/settings.yaml` (`llm.profiles`): `ovh` (OVHcloud AI Endpoints, UE, `gpt-oss-20b`), `ark` (ARK Labs, Warszawa, infrastruktura w UE, `arklabsai/Bielik-11B-v3.0-Instruct`, klucz `ARK_API_KEY`), `sherlock` (CloudFerro, UE, Bielik 11B / PLLuM 12B / Llama 3.1 8B), `groq` (tylko testy). Model profilu można nadpisać przez `<NAZWA>_MODEL`.
 
 **Klucz API dla jury.** `.env` nie trafia do repozytorium. Do zgłoszenia klucz przekazujemy osobno; wystarczy wpisać go do `.env` (np. `LLM_PROFILE=ovh` i `OVH_API_KEY=...`) i uruchomić `start.bat`. Bez klucza aplikacja działa na samych regułach.
 
@@ -187,7 +187,7 @@ Test dokładnie tak jak u oceniających: wrzuć PDF-y do `/opt/solution/input`, 
 | foldery `input/` i `output/` w katalogu głównym, JSON o tej samej nazwie co PDF, drzewo spraw | `python -m odw2json` / `start.bat` czyta `input/<sprawa>/*.pdf`, pisze `output/<sprawa>/<plik>.json` |
 | CLI / wrapper script, GUI dodatkowo | `start.bat`, `start.sh`, `python -m odw2json web` |
 | Python 3.13+, `requirements.txt` | tak (CLI ostrzega przy starszym Pythonie) |
-| tylko open source, bez GPU, LLM po API z UE, klucz dostarczony | modele open-weight, profile `ovh` / `sherlock` / Scaleway; klucz w `.env` |
+| tylko open source, bez GPU, LLM po API z UE, klucz dostarczony | modele open-weight, profile `ovh` / `ark` / `sherlock` / Scaleway; klucz w `.env` |
 | skany | OCR lokalny (Tesseract `pol`, zapasowo RapidOCR), więc OCR nie liczy się jako model z API |
 | 150 PDF w 45 min | budżet czasu `time_budget_s`, potem same reguły |
 | nowe klasy bez zmian w kodzie | tylko YAML (sekcja niżej) |
