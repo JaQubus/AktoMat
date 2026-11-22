@@ -13,7 +13,7 @@ TAG="# aktomat-web"
 stop() {
   tmux kill-session -t aktomat-web 2>/dev/null || true
   pkill -f "odw2json web --host 0.0.0.0 --port $PORT" 2>/dev/null || true
-  (crontab -l 2>/dev/null | grep -v "$TAG") | crontab - || true
+  ({ crontab -l 2>/dev/null || true; } | { grep -v "$TAG" || true; }) | crontab - || true
 }
 
 if [ "${1:-}" = "--stop" ]; then stop; echo "Zatrzymano."; exit 0; fi
@@ -24,7 +24,7 @@ if command -v tmux >/dev/null; then
 else
   nohup bash -c "$CMD" >/dev/null 2>&1 &
 fi
-(crontab -l 2>/dev/null | grep -v "$TAG"; echo "@reboot $CMD $TAG") | crontab -
+({ crontab -l 2>/dev/null || true; } | { grep -v "$TAG" || true; }; echo "@reboot $CMD $TAG") | crontab -
 sleep 4
 if curl -fsS "http://127.0.0.1:$PORT/api/status" >/dev/null; then
   echo "GUI działa: http://$(curl -fsS -4 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}'):$PORT  (log: $SOL/web.log)"
