@@ -58,6 +58,9 @@
   .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.22); white-space: nowrap; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa3b2; flex: none; }
   .dot.on { background: #6fe0a0; } .dot.off { background: #f0a500; }
+  button.chip { color: inherit; font: inherit; font-size: 12.5px; cursor: pointer; }
+  button.chip:hover:not(:disabled) { background: rgba(255,255,255,.2); }
+  button.chip:disabled { cursor: default; opacity: .85; }
   .who { background: none; border: 1px solid transparent; color: #fff; font-size: 14px; padding: 4px 8px; border-radius: 6px; cursor: pointer; opacity: .92; }
   .who:hover { border-color: rgba(255,255,255,.3); }
   .iconbtn { background: none; border: 1px solid rgba(255,255,255,.3); color: var(--brand-ink); border-radius: 6px; padding: 5px 8px; cursor: pointer; }
@@ -480,6 +483,7 @@ const S = {
   filter: "todo", tab: "dane", zoom: 100, info: {}, activePath: null, termDays: {},
   sid: null, sname: "", sessions: [], eksport: null,
   who: (() => { try { return localStorage.getItem("aktomat-who") || ""; } catch (e) { return ""; } })(),
+  ai: (() => { try { return localStorage.getItem("aktomat-ai") !== "0"; } catch (e) { return true; } })(),
 };
 const KIND = { odwolanie: ["ODW", "Odwołanie"], pelnomocnictwo: ["PEŁ", "Pełnomocnictwo"], przelew: ["PRZ", "Potwierdzenie przelewu"] };
 const kindLabel = (k) => KIND[k]?.[1] || humanize(k || "");
@@ -527,11 +531,22 @@ $("#home").onclick = () => go("start");
 $("#q").addEventListener("input", (e) => { S.q = e.target.value; drawNav(); if (["start", "kolejka"].includes(S.view) || S.q) render(); });
 
 /* ---------- dane startowe ---------- */
-fetch("/api/status").then(r => r.json()).then(s => {
-  S.status = s;
-  const tip = `${s.llm ? `Dane odczytują reguły, a brakujące pola uzupełnia model AI (${s.model}, serwer w UE). Wartości od AI są oznaczone do sprawdzenia.` : "Dane odczytują wyłącznie reguły, bez modelu AI."} ${s.ocr ? "Skany są zamieniane na tekst (OCR)." : "Odczyt skanów (OCR) jest wyłączony: skany mogą zostać bez danych."}`;
-  $("#chips").innerHTML = `<span class="chip" title="${esc(tip)}"><span class="dot ${s.llm ? "on" : "off"}"></span>${s.llm ? "Asystent AI włączony" : "Bez asystenta AI"}${s.ocr ? "" : ", bez odczytu skanów"}</span>`;
-}).catch(() => { $("#chips").innerHTML = `<span class="chip"><span class="dot off"></span>brak połączenia z serwerem</span>`; });
+/* Przełącznik asystenta AI: dotyczy dokumentów wczytanych od tej chwili (już odczytane zostają bez zmian). */
+const aiOn = () => !!(S.status?.llm && S.ai);
+function drawAi() {
+  const s = S.status; if (!s) return;
+  const on = aiOn();
+  const tip = !s.llm ? "Asystent AI jest niedostępny: serwer nie ma skonfigurowanego modelu (klucz w pliku .env). Dane odczytują wyłącznie reguły."
+    : on ? `Kliknij, aby wyłączyć. Dane odczytują reguły, a brakujące pola uzupełnia model AI (${s.model}, serwer w UE). Wartości od AI są oznaczone do sprawdzenia.`
+    : "Kliknij, aby włączyć. Teraz dane odczytują wyłącznie reguły, bez modelu AI.";
+  $("#chips").innerHTML = `<button class="chip" type="button" id="aiToggle" ${s.llm ? `aria-pressed="${on}"` : "disabled"} title="${esc(tip + (s.ocr ? "" : " Odczyt skanów (OCR) jest wyłączony."))}"><span class="dot ${on ? "on" : "off"}"></span>${!s.llm ? "Asystent AI niedostępny" : on ? "Asystent AI włączony" : "Asystent AI wyłączony"}${s.ocr ? "" : ", bez odczytu skanów"}</button>`;
+  $("#aiToggle").onclick = () => {
+    S.ai = !S.ai; try { localStorage.setItem("aktomat-ai", S.ai ? "1" : "0"); } catch (e) {}
+    drawAi(); markDirty();
+    say(S.ai ? "Asystent AI włączony. Nowo wczytane dokumenty uzupełni model AI." : "Asystent AI wyłączony. Nowo wczytane dokumenty odczytają same reguły.");
+  };
+}
+fetch("/api/status").then(r => r.json()).then(s => { S.status = s; drawAi(); }).catch(() => { $("#chips").innerHTML = `<span class="chip"><span class="dot off"></span>brak połączenia z serwerem</span>`; });
 fetch("/api/klasy").then(r => r.json()).then(c => { S.classes = c; render(); });
 fetch("/api/kontrola/reguly").then(r => r.json()).then(r => { S.rules = r; });
 fetch("/api/pisma").then(r => r.json()).then(r => { S.pisma = r; }).catch(() => { S.pisma = { pisma: [] }; });
@@ -620,7 +635,7 @@ function sessState(t) { $("#sess").hidden = !S.sid; $("#sessName").textContent =
 function sessionPayload() {
   const items = S.items.filter(i => !i.pending).map(i => ({ id: i.id, plik: i.plik, sprawa: i.sprawa, sciezka: i.sciezka, klasa: i.klasa, json: i.json, orig: i.orig, slad: i.slad, edits: i.edits, ok: i.ok, blad: i.blad }));
   const letters = Object.fromEntries(Object.entries(S.letters).map(([k, v]) => [k, { id: v.id, syg: v.syg, data: v.data, edited: v.edited, tekst: v.edited ? v.tekst : "" }]));
-  return { items, skip: S.skip, letters, log: S.log, termDays: S.termDays };
+  return { items, skip: S.skip, letters, log: S.log, termDays: S.termDays, ai: S.ai };
 }
 function markDirty() {
   if (restoring || !S.items.some(i => !i.pending)) return;
@@ -646,6 +661,7 @@ async function openSession(sid, quiet) {
   Object.assign(S, { sid, sname: d.nazwa || sid, items: (st.items || []).map(i => ({ ...i, pending: false, edits: i.edits || {}, ok: i.ok || {} })),
     skip: st.skip || {}, letters: st.letters || {}, log: st.log || [], termDays: st.termDays || {}, checks: {}, checksRaw: {}, current: null, caseName: null });
   try { localStorage.setItem("aktomat-sid", sid); } catch (e) {}
+  if (typeof st.ai === "boolean") { S.ai = st.ai; drawAi(); }
   caseNames().forEach(n => recheck(n));
   restoring = false;
   sessState("zapisano " + (d.zmieniono ? new Date(d.zmieniono).toLocaleString("pl-PL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""));
@@ -795,7 +811,7 @@ function intake(list) {
 // Zerwane połączenie (np. restart serwera): do 3 prób z odstępem 2 s i 5 s, zanim dokument dostanie błąd.
 async function postExtract(x, tries = 3) {
   for (let i = 0; ; i++) {
-    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel);
+    const fd = new FormData(); fd.append("files", x.file, x.file.name); fd.append("sciezki", x.rel); fd.append("ai", aiOn() ? "1" : "0");
     try {
       const r = await fetch("/api/extract", { method: "POST", body: fd });
       if (!r.ok) throw new Error("HTTP " + r.status);

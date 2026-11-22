@@ -41,14 +41,20 @@ MAX_ZIP_FILES = 500
 
 app = FastAPI(title="AktoMat", version="1.2")
 _engine: Engine | None = None
+_engine_rules: Engine | None = None
 _sem: asyncio.Semaphore | None = None
 
 
-def engine() -> Engine:
-    global _engine
+def engine(use_llm: bool = True) -> Engine:
+    """Silnik z ustawień. use_llm=False (przełącznik w GUI) daje ten sam silnik bez LLM: same reguły."""
+    global _engine, _engine_rules
     if _engine is None:
         _engine = Engine()
-    return _engine
+    if use_llm or not _engine.llm.enabled:
+        return _engine
+    if _engine_rules is None:
+        _engine_rules = Engine(settings=_engine.settings, classes=_engine.classes, use_llm=False)
+    return _engine_rules
 
 
 def _limit() -> asyncio.Semaphore:
@@ -110,10 +116,10 @@ def raport():
     return {"jest": True, "tekst": REPORT.read_text(encoding="utf-8")}
 
 
-async def _process(p: Path, fid: str, case: str, rel: str) -> dict:
+async def _process(p: Path, fid: str, case: str, rel: str, use_llm: bool = True) -> dict:
     async with _limit():
         try:
-            r = await run_in_threadpool(engine().process, p)
+            r = await run_in_threadpool(engine(use_llm).process, p)
         except Exception as e:  # noqa: BLE001 - jeden zły plik nie zatrzymuje partii
             return {"id": fid, "plik": p.name, "sprawa": case, "sciezka": rel, "blad": str(e)}
     if r.trace.get("ocr_strony"):
@@ -136,9 +142,12 @@ def _store(name: str, data) -> tuple[str, Path]:
 
 
 @app.post("/api/extract")
-async def extract(files: list[UploadFile] = File(...), sciezki: list[str] | None = Form(None)):
+async def extract(files: list[UploadFile] = File(...), sciezki: list[str] | None = Form(None),
+                  ai: str | None = Form(None)):
     """Przyjmuje PDF-y i/lub archiwa ZIP. `sciezki` (opcjonalnie, w tej samej kolejności co pliki)
-    to ścieżki względne z wybranego folderu: katalog nadrzędny pliku = nazwa sprawy."""
+    to ścieżki względne z wybranego folderu: katalog nadrzędny pliku = nazwa sprawy.
+    `ai=0` wyłącza LLM dla tych plików (przełącznik „Asystent AI” w GUI)."""
+    use_llm = (ai or "1").strip().lower() not in ("0", "false", "nie", "off")
     jobs, out = [], []
     for i, f in enumerate(files):
         given = sciezki[i] if sciezki and i < len(sciezki) and sciezki[i] else f.filename
@@ -164,7 +173,7 @@ async def extract(files: list[UploadFile] = File(...), sciezki: list[str] | None
         else:
             out.append({"plik": rel.name, "sprawa": _case_of(rel, "bez sprawy"),
                         "blad": "Nieobsługiwany format: wczytaj PDF albo ZIP"})
-    out += await asyncio.gather(*(_process(*j) for j in jobs))
+    out += await asyncio.gather(*(_process(*j, use_llm=use_llm) for j in jobs))
     return out
 
 

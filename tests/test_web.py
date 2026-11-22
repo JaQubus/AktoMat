@@ -176,3 +176,18 @@ def test_usuniecie_pliku(client):
     assert client.delete("/api/pliki/abc123").json() == {"ok": True}
     assert not d.exists()
     assert client.delete("/api/pliki/..%2F..").status_code == 404
+
+
+def test_przelacznik_ai_wylacza_llm_bez_restartu(client, monkeypatch):
+    """Przełącznik „Asystent AI” w GUI: ai=0 przetwarza pliki silnikiem bez LLM (same reguły)."""
+    llm_engine = Engine(use_llm=False)
+    llm_engine.llm.enabled = True  # udajemy skonfigurowany model; wywołania LLM nie mogą nastąpić przy ai=0
+    llm_engine.llm.extract = lambda *a, **k: pytest.fail("LLM wywołany mimo wyłączonego asystenta")
+    monkeypatch.setattr(web, "_engine", llm_engine)
+    monkeypatch.setattr(web, "_engine_rules", None)
+    assert web.engine(True) is llm_engine
+    rules = web.engine(False)
+    assert rules is not llm_engine and not rules.llm.enabled and web.engine(False) is rules
+    res = client.post("/api/extract", files={"files": ("dowod.pdf", _pdf(PRZELEW), "application/pdf")},
+                      data={"ai": "0"}).json()
+    assert res[0]["klasa"] == "przelew" and not res[0]["slad"].get("llm_uzyty")
