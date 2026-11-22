@@ -229,12 +229,15 @@ def extract(doc, cls: DocClass, llm_json: dict | None, llm_error: str | None = N
             raw_llm = paths.get(llm_snapshot, path) if llm_snapshot is not None else None
             v_llm = normalize(raw_llm, f.type)
             ok_llm = v_llm is not None and (not f.require_grounding or grounded(v_llm, f.type, text, folded, dig))
+            if v_llm is not None and not f.llm:
+                ok_llm = False   # pole tylko z reguł (llm: false w YAML)
             hit = rule_hits.get(f.path)
             raw_rule = _rule_value_at(hit.value, idx, hit.per_block) if hit else None
             v_rule = normalize(raw_rule, f.type)
             notes = []
             if v_llm is not None and not ok_llm:
-                notes.append("wartość LLM odrzucona: brak w tekście dokumentu")
+                notes.append("wartość LLM pominięta: pole tylko z reguł" if not f.llm
+                             else "wartość LLM odrzucona: brak w tekście dokumentu")
             if raw_llm not in (None, "") and v_llm is None:
                 notes.append(f"wartość LLM w złym formacie: {raw_llm!r}")
             if f.prefer == "rules":

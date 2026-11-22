@@ -103,7 +103,7 @@ lists:
 # --- Instrukcje dla modelu językowego (dokładane do promptu) ---
 llm_instructions: |
   - OdwolanieKIO.data i miejscowosc bierz WYŁĄCZNIE z nagłówka pisma (linia typu "Miasto, dnia 9 listopada 2026 r." albo "Miasto, 28.08.2026"). Jeśli pismo nie ma takiej linii - null (nie bierz daty z treści).
-  - czynnosc_powod_id ustal WYŁĄCZNIE na podstawie pierwszej zaskarżonej czynności/zaniechania zamawiającego (zwykle zdanie "Zamawiający w dniu ... [czynność]" albo pierwszy zarzut). Wybierz id ze słownika powody. Rozróżniaj czynność od zaniechania: "nie odrzucił / zaniechał odrzucenia" = 7, "odrzucił" = 1; "nie wykluczył / zaniechał wykluczenia" = 8, "wykluczył" = 3; "zaniechał unieważnienia" = 10, "unieważnił" = 9; wybór najkorzystniejszej oferty = 2; publikacja SWZ / ogłoszenia z SWZ = 4; zmiana/modyfikacja SWZ = 5; odpowiedzi/wyjaśnienia treści SWZ = 6; postanowienia Opisu Przedmiotu Zamówienia = 11; projektowane postanowienia umowy / wzór umowy = 12. Wezwania zamawiającego do wyjaśnień (wcześniejsze zdarzenia) NIE są zaskarżoną czynnością.
+  - czynnosc_powod_id ustal WYŁĄCZNIE na podstawie pierwszej zaskarżonej czynności/zaniechania zamawiającego (zwykle zdanie "Zamawiający w dniu ... [czynność]" albo pierwszy zarzut). Wybierz id ze słownika powody. Rozróżniaj czynność od zaniechania: "nie odrzucił / zaniechał odrzucenia" = 7, "odrzucił" = 1; "nie wykluczył / zaniechał wykluczenia" = 8, "wykluczył" = 3; "zaniechał unieważnienia" = 10, "unieważnił" = 9; wybór najkorzystniejszej oferty = 2; publikacja SWZ / ogłoszenia z SWZ = 4; zmiana/modyfikacja SWZ = 5 (zamawiający z własnej inicjatywy zmienił treść SWZ); odpowiedzi/wyjaśnienia treści SWZ = 6 (zamawiający odpowiedział na pytania wykonawców); postanowienia Opisu Przedmiotu Zamówienia = 11; projektowane postanowienia umowy / wzór umowy = 12. Wezwania zamawiającego do wyjaśnień (wcześniejsze zdarzenia) NIE są zaskarżoną czynnością.
   - czynnosc_dzien to data tej czynności (RRRR-MM-DD); jeśli brak wiarygodnej daty - null.
   - Odwolujacy: wykonawca wnoszący odwołanie. Przy konsorcjum podaj tylko Lidera konsorcjum (jeden element listy). przez-pelnomocnika = 1 jeśli odwołującego reprezentuje pełnomocnik (adwokat, radca prawny, inna osoba), inaczej 0.
   - pelnomocnik.imie_nazwisko: tylko PIERWSZY wymieniony pełnomocnik, bez tytułów (adw., r. pr.), w mianowniku. pelnomocnik.nazwa: nazwa kancelarii/podmiotu zatrudniającego pełnomocnika (np. z "adres do korespondencji"). pelnomocnik.mail: e-mail kontaktowy podany przy odwołującym/pełnomocniku.
@@ -116,6 +116,7 @@ llm_instructions: |
 fields:
   - path: OdwolanieKIO.data
     type: date
+    llm: false   # LLM (np. Bielik) dopisuje datę z treści, gdy pismo nie ma linii nagłówka; reguły: F1 1.000
     description: Data pisma z nagłówka pierwszej strony.
     rules:
       - pattern: '(?m)^\s*[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:[ -][A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż]+){0,2}(?:\s*,\s*(?:dnia\s+|dn\.\s*|data\s*:?\s*)?|\s+dnia\s+)(?P<v>\d{1,2}\.\d{1,2}\.\d{4}|\d{1,2}\s+[a-ząćęłńóśźż]+\s+\d{4}|\d{4}-\d{2}-\d{2})'
@@ -124,6 +125,7 @@ fields:
 
   - path: OdwolanieKIO.miejscowosc
     type: string
+    llm: false   # jw.: bez linii "Miasto, dnia ..." ma być null, a LLM bierze np. Warszawę z adresu KIO
     description: Miejscowość z nagłówka pierwszej strony (np. "Pruszków").
     vocabulary: slowniki/miejscowosci.txt   # "Krakow" ze skanu -> "Kraków"
     rules:
@@ -133,7 +135,7 @@ fields:
 
   - path: OdwolanieKIO.czynnosc_powod_id
     type: enum
-    prefer: llm
+    prefer: rules   # reguły: 0 FP na danych i skanach UZP; LLM tylko uzupełnia brak
     description: Id powodu odwołania 1-12 ze słownika powody, wyłącznie na podstawie pierwszej zaskarżonej czynności.
     rules:
       # "wnoszę odwołanie wobec: 1. <czynność> ... 2. ..." - liczy się tylko punkt 1
@@ -271,6 +273,7 @@ fields:
   - path: Zamawiajacy[*].prowadzacy_postepowanie
     type: flag
     require_grounding: false
+    llm: false   # LLM wpisuje 1 przy jednym zamawiającym; wartość wynika wyłącznie z liczby bloków
     rules:   # tylko gdy zamawiających jest kilku (bloki)
       - {pattern: 'lider|prowadząc\w*\s+postępowanie|pełnomocnik\w*\s+zamawiając', value: 1, section: '@multi'}
       - {kind: const, value: 0, section: '@multi'}

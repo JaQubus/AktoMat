@@ -58,3 +58,14 @@ def test_real_world_appeal_phrasing():
 
 def test_kio_order_is_not_a_document_class():
     assert classify(KIO_ORDER, "x.pdf", list(_classes().values())).name is None
+
+
+def test_llm_false_fields_ignore_llm_answer():
+    """Data/miejscowość tylko z nagłówka: LLM nie może ich dopisać, gdy pismo nie ma linii 'Miasto, dnia ...'."""
+    cls = _classes()["odwolanie"]
+    text = APPEAL.split("\n", 1)[1]   # bez linii z datą
+    llm = {"OdwolanieKIO": {"data": "2024-03-12", "miejscowosc": "Warszawa"},
+           "Zamawiajacy": [{"nazwa": "Szpital Wojewódzki im. Testowego", "prowadzacy_postepowanie": 1}]}
+    r, trace, _ = extract(Document(Path("x.pdf"), [text]), cls, llm)
+    assert r["OdwolanieKIO"]["data"] is None and r["OdwolanieKIO"]["miejscowosc"] is None
+    assert r["Zamawiajacy"][0]["prowadzacy_postepowanie"] is None
