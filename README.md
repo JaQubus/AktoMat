@@ -157,6 +157,19 @@ Na skanach mniejszy model daje tyle samo co duży, bo LLM tylko uzupełnia pola,
 
 Wynik na danych treningowych jest optymistyczny, bo reguły były strojone na tych samych szablonach. Prawdziwe odwołania są pisane swobodnie i tam główną robotę wykonuje LLM, a reguły działają jako weryfikacja i zapas.
 
+## Wdrożenie na serwer oceny UZP (VM.md)
+
+Organizator ocenia rozwiązanie na swojej maszynie (Ubuntu 24.04, 2 vCPU, bez GPU) komendą z `/opt/solution/RUN.md`. Instalacja (jednorazowo, po zalogowaniu przez SSH):
+
+```bash
+cd /opt/solution
+git clone https://github.com/JaQubus/AktoMat.git repo
+bash repo/deploy/vm_setup.sh          # Tesseract z polskim, Python 3.13, venv, RUN.md, test
+nano /opt/solution/.env               # opcjonalnie klucz API (LLM_PROFILE=... i <PROFIL>_API_KEY=...)
+```
+
+Test dokładnie tak jak u oceniających: wrzuć PDF-y do `/opt/solution/input`, wyczyść `/opt/solution/output` i uruchom `sudo bash repo/deploy/run.sh` (z katalogu `/opt/solution`). Aplikacja czyta też `.env` z bieżącego katalogu albo ze ścieżki `ODW2JSON_ENV`.
+
 ## Zgodność z wymaganiami UZP
 
 | wymaganie (README UZP) | jak spełnione |
