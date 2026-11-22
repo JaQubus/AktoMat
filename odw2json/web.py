@@ -81,6 +81,17 @@ def index():
     return (STATIC / "index.html").read_text(encoding="utf-8")
 
 
+FONTS = {"IBMPlexSans-Regular.woff2", "IBMPlexSans-Italic.woff2", "IBMPlexSans-SemiBold.woff2"}
+
+
+@app.get("/fonts/{name}")
+def font(name: str):
+    """Krój IBM Plex Sans (licencja OFL) serwowany lokalnie: GUI działa bez internetu i bez zapytań do Google."""
+    if name not in FONTS:
+        raise HTTPException(404)
+    return FileResponse(STATIC / "fonts" / name, media_type="font/woff2", headers={"Cache-Control": "max-age=604800"})
+
+
 @app.get("/api/status")
 def status():
     e = engine()
