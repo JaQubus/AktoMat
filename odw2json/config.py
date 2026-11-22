@@ -18,7 +18,10 @@ def _load_env():
     try:
         from dotenv import load_dotenv
 
-        load_dotenv(ROOT / ".env")
+        # kolejność: ODW2JSON_ENV, .env w bieżącym katalogu (np. /opt/solution/.env na VM UZP), .env w repo
+        for env in (os.environ.get("ODW2JSON_ENV"), Path.cwd() / ".env", ROOT / ".env"):
+            if env and Path(env).is_file():
+                load_dotenv(env)
     except ImportError:
         pass
 
