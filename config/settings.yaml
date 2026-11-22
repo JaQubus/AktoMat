@@ -22,6 +22,12 @@ llm:
     sherlock:               # CloudFerro Sherlock (polska firma, UE); klucz w SHERLOCK_API_KEY. Model 11B = 18 pkt UZP
       base_url: https://api-sherlock.cloudferro.com/openai/v1
       model: speakleash/Bielik-11B-v3.0-Instruct   # albo CYFRAGOVPL/PLLuM-12B-instruct, meta-llama/Llama-3.1-8B-Instruct (20 pkt)
+    ark:                    # ARK Labs / ARK Cloud (ARK sp. z o.o., Warszawa; infrastruktura w UE); klucz w ARK_API_KEY
+      base_url: https://api.ark-labs.cloud/api/v1
+      model: arklabsai/Bielik-11B-v3.0-Instruct   # pełne id z prefiksem arklabsai/ (ARK nie ma aliasów)
+      max_doc_chars: 20000  # kontekst Bielika 32K tokenów (prompt + dokument + odpowiedź)
+      max_tokens: 4000
+      extra_body: {}        # Bielik nie jest modelem "reasoning"; ARK odrzuca nieznane pola (400 unknown_parameter)
     groq:                   # darmowy limit, tylko do testów (firma z USA; w zgłoszeniu zostaje Scaleway)
       base_url: https://api.groq.com/openai/v1
       model: openai/gpt-oss-120b
