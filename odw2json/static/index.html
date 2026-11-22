@@ -15,6 +15,7 @@
     --accent: #1f4b82; --accent-ink: #ffffff; --accent-soft: #e9eef6; --accent-hover: #183c6a; --focus: #c58a00;
     --ok: #2d6a3a; --ok-soft: #edf5ef; --warn: #8a5800; --warn-soft: #fbf4e6; --bad: #a3271c; --bad-soft: #fbefed;
     --llm: #4b3aa8; --llm-soft: #ebe8fa; --rules: #1f7a3a; --rules-soft: #e2f2e6; --derived: #8a5300; --derived-soft: #faf0d9; --manual: #0b5f86; --manual-soft: #e0f0f7;
+    --k-odw: #0c6b67; --k-odw-soft: #dff0ed; --k-pel: #4b3aa8; --k-pel-soft: #ebe8fa; --k-prz: #9a4a10; --k-prz-soft: #fbeadb;
     --mark: rgba(255, 196, 0, .38); --mark-line: #b98200; --viewer: #5b6169;
     --radius: 4px; --shadow: none;
     --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
@@ -25,6 +26,7 @@
       --brand: #0f1d31; --accent: #8fb1e3; --accent-ink: #0d1626; --accent-soft: #1b283b; --accent-hover: #a9c4ec;
       --ok: #7fc48d; --ok-soft: #17261b; --warn: #e2b553; --warn-soft: #2b2312; --bad: #f08b80; --bad-soft: #321b18;
       --llm: #aea6ff; --llm-soft: #252046; --rules: #74d396; --rules-soft: #153223; --derived: #f2c14e; --derived-soft: #33290f; --manual: #7fd0f2; --manual-soft: #11303c;
+      --k-odw: #4cc2b5; --k-odw-soft: #123432; --k-pel: #aea6ff; --k-pel-soft: #252046; --k-prz: #f0a668; --k-prz-soft: #3a2614;
       --viewer: #24282d;
     }
   }
@@ -33,6 +35,7 @@
       --brand: #0f1d31; --accent: #8fb1e3; --accent-ink: #0d1626; --accent-soft: #1b283b; --accent-hover: #a9c4ec;
       --ok: #7fc48d; --ok-soft: #17261b; --warn: #e2b553; --warn-soft: #2b2312; --bad: #f08b80; --bad-soft: #321b18;
       --llm: #aea6ff; --llm-soft: #252046; --rules: #74d396; --rules-soft: #153223; --derived: #f2c14e; --derived-soft: #33290f; --manual: #7fd0f2; --manual-soft: #11303c;
+      --k-odw: #4cc2b5; --k-odw-soft: #123432; --k-pel: #aea6ff; --k-pel-soft: #252046; --k-prz: #f0a668; --k-prz-soft: #3a2614;
       --viewer: #24282d;
   }
   * { box-sizing: border-box; }
@@ -147,9 +150,12 @@
   th:first-child, td:first-child { padding-left: 14px; } th:last-child, td:last-child { padding-right: 14px; }
   td.mono { font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
   tr.click { cursor: pointer; } tr.click:hover td { background: var(--panel-2); }
-  .tag { display: inline-block; border-radius: 3px; padding: 0 6px; font-weight: 600; font-size: 12.5px; white-space: nowrap; border: 1px solid var(--line-strong); color: var(--ink); background: var(--panel); }
-  .t-other { background: var(--panel-2); color: var(--muted); }
-  .t-rej { color: var(--bad); border-color: var(--bad); font-weight: 600; }
+  .tag { display: inline-block; border-radius: 4px; padding: 1px 8px; font-weight: 600; font-size: 13px; white-space: nowrap; border: 1px solid transparent; }
+  .t-odwolanie { background: var(--k-odw-soft); color: var(--k-odw); }
+  .t-pelnomocnictwo { background: var(--k-pel-soft); color: var(--k-pel); }
+  .t-przelew { background: var(--k-prz-soft); color: var(--k-prz); }
+  .t-other { background: var(--panel-2); color: var(--muted); border-color: var(--line-strong); }
+  .t-rej { color: var(--muted); border-color: var(--line-strong); font-weight: 500; }
   .st-ok { color: var(--ok); font-weight: 600; } .st-warn { color: var(--warn); font-weight: 600; } .st-bad { color: var(--bad); font-weight: 600; } .st-muted { color: var(--muted); }
   .checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
   .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 6px; }
