@@ -148,7 +148,9 @@ Ewaluacja liczy F1 dokładnie według definicji UZP: TP = wartość zgodna (dłu
 | j.w., zapasowy OCR RapidOCR (bez Tesseract) | same reguły, bez LLM | 0.915 |
 | 8 spraw jako skany 150 dpi w skali szarości, RapidOCR | same reguły, bez LLM | 0.933 (przed poprawkami skanów: 0.911) |
 | 60 spraw jako skany 150 dpi, Tesseract `pol` | same reguły, bez LLM | 0.984 (przed odczytem kolumn: 0.953) |
-| skany UZP `dane/skany` (10 odwołań, 10 pełnomocnictw, 10 przelewów, inne szablony) | same reguły, bez LLM | 0.875, klasyfikacja 30/30 (na starcie: 0.750) |
+| skany UZP `dane/skany` (10 odwołań, 10 pełnomocnictw, 10 przelewów, inne szablony) | same reguły, bez LLM | 0.883, klasyfikacja 30/30 (na starcie: 0.750) |
+| 27 publicznych orzeczeń KIO (wyroki, postanowienia) jako dokumenty negatywne | same reguły | 0/27 błędnie sklasyfikowanych |
+| 10 publicznych odwołań do KIO (BIP, 2020-2024), 5 sprawdzonych ręcznie, 67 pól | same reguły / reguły + gpt-oss-20b | 64% / 85% pól poprawnych (przed poprawkami wzorców z tego testu) |
 | klasyfikacja 60 spraw + 16 dokumentów negatywnych UZP | | 196/196 |
 | podróbki (odpowiedź na odwołanie, przystąpienie, skarga, wzór) i dokument z mylącą nazwą pliku | testy `tests/test_robustness.py` | wszystkie `{}` / właściwa klasa |
 | 60 spraw treningowych | reguły + mistral-small-3.2-24b | 0.9988 |

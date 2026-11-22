@@ -304,7 +304,7 @@ def r_entity_name(rule, text):
     t = t.strip()
     m = re.match(
         r"(?P<v>.+?)(?:,?\s*(?:z\s+siedzib\w+|ul\.|al\.|pl\.|os\.|\(KRS|\(NIP|KRS[:\s]|NIP[:\s]|adres|"
-        r"prowadząc\w+|wpisan\w+|\(dalej|\(zwan\w*|zwan\w+\s+dalej|\d{2}-\d{3})|\n\s*(?:ul\.|al\.|pl\.|os\.|KRS|NIP|\d{2}-\d{3}))",
+        r"prowadząc\w+|wpisan\w+|\(dalej|\(zwan\w*|zwan\w+\s+dalej|\d{2}-\d{3})|\n\s*(?:(?i:ul\.|ulica|al\.|aleja|pl\.|os\.)|KRS|NIP|\d{2}-\d{3}))",
         t, re.S)
     if not m:
         return None

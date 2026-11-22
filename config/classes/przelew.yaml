@@ -22,6 +22,8 @@ classify:
     - {pattern: 'wzor (pelnomocnictwa|potwierdzenia)|\[\s*(nazwa|imie|adres|data|kwota)\b', weight: 8}
     - {pattern: 'zarzut nr|wnosze odwolanie', weight: 4}
     - {pattern: 'mocodawc\w* (jest|udziela)|udzielam pelnomocnictwa', weight: 4}
+    # orzeczenia KIO o zwrocie wpisu wspominają przelew i kwotę, ale nie są potwierdzeniem przelewu
+    - {pattern: 'zwrot\w* (kwoty )?wpisu|z rachunku urzedu zamowien publicznych', weight: 4}
 
 output_template:
   przelew_bankowy:
